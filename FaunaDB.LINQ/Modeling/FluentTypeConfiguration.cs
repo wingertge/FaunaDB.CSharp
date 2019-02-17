@@ -24,11 +24,10 @@ namespace FaunaDB.LINQ.Modeling
 
         public IFluentTypeConfiguration<T> HasIndex<TProperty>(Expression<Func<T, TProperty>> property, string indexName, string name = null)
         {
-            _configuration[property.GetPropertyInfo()] = new IndexTypeConfigurationEntry
+            _configuration[property.GetPropertyInfo()] = new TypeConfigurationEntry
             {
                 Type = ConfigurationType.Index,
                 Name = name,
-                IndexName = indexName
             };
 
             return this;
@@ -36,10 +35,9 @@ namespace FaunaDB.LINQ.Modeling
 
         public IFluentTypeConfiguration<T> HasCompositeIndex<TProperty>(Expression<Func<T, TProperty>> property, string indexName)
         {
-            _configuration[property.GetPropertyInfo()] = new IndexTypeConfigurationEntry
+            _configuration[property.GetPropertyInfo()] = new TypeConfigurationEntry
             {
                 Type = ConfigurationType.CompositeIndex,
-                IndexName = indexName
             };
 
             return this;

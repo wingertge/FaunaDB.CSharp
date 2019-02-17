@@ -2,6 +2,7 @@
 using System.Linq;
 using FaunaDB.Driver;
 using FaunaDB.LINQ.Extensions;
+using FaunaDB.LINQ.Modeling;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using Xunit;
@@ -213,5 +214,28 @@ namespace FaunaDB.LINQ.Tests
         }
 
         private static object[] Arr(params object[] values) => values;
+
+        [Fact]
+        public static void CustomDbFunctionTest()
+        {
+            IsolationUtils.FakeAttributeClient(CustomDbFunctionTest_Run);
+            IsolationUtils.FakeManualClient(CustomDbFunctionTest_Run);
+        }
+        
+        private static void CustomDbFunctionTest_Run(IDbContext client, ref Expr lastQuery)
+        {
+            var q = client.Query<ReferenceModel>(a => a.Indexed1 == "test1").Select(a => CustomDbFunction(a.Indexed1));
+            
+            var selectorManual = Map(Match(Index("index_1"), Arr("test1")), Lambda("arg0", Get(Var("arg0"))));
+            var selectManual = Map(selectorManual, Lambda("arg1", Call(Function("custom_function"), Select(Arr("data", "indexed1"), Var("arg1")))));
+            var manual = selectManual;
+
+            q.Provider.Execute<object>(q.Expression);
+            
+            Assert.Equal(JsonConvert.SerializeObject(manual), JsonConvert.SerializeObject(lastQuery));
+        }
+
+        [DbFunction("custom_function")]
+        private static string CustomDbFunction(string arg) => throw new NotSupportedException();
     }
 }

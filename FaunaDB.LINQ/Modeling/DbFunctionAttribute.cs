@@ -13,9 +13,8 @@ namespace FaunaDB.LINQ.Modeling
         /// Function name on database. Defaults to function name.
         /// </summary>
         /// <value>The database function name.</value>
-        public string Name { get; set; }
-
-        public DbFunctionAttribute() { }
+        public string Name { get; private set; }
+        
         public DbFunctionAttribute(string name)
         {
             Name = name;
