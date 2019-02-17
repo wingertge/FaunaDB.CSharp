@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FaunaDB.Driver", "FaunaDB.Driver\FaunaDB.Driver.csproj", "{4E75D839-B707-4065-A28A-5A63229FF3E0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FaunaDB.Driver.Tests", "FaunaDB.Driver.Tests\FaunaDB.Driver.Tests.csproj", "{10DBAD04-0765-4E5C-98ED-EFB55ECBBFF2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FaunaDB.LINQ", "FaunaDB.LINQ\FaunaDB.LINQ.csproj", "{3CDA954D-1586-423A-AC1E-EBF73DBBD737}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FaunaDB.LINQ.Tests", "FaunaDB.LINQ.Tests\FaunaDB.LINQ.Tests.csproj", "{7451689C-56E8-44E6-B26C-5D9B8F8756CB}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4E75D839-B707-4065-A28A-5A63229FF3E0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4E75D839-B707-4065-A28A-5A63229FF3E0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4E75D839-B707-4065-A28A-5A63229FF3E0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4E75D839-B707-4065-A28A-5A63229FF3E0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{10DBAD04-0765-4E5C-98ED-EFB55ECBBFF2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{10DBAD04-0765-4E5C-98ED-EFB55ECBBFF2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{10DBAD04-0765-4E5C-98ED-EFB55ECBBFF2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{10DBAD04-0765-4E5C-98ED-EFB55ECBBFF2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3CDA954D-1586-423A-AC1E-EBF73DBBD737}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3CDA954D-1586-423A-AC1E-EBF73DBBD737}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3CDA954D-1586-423A-AC1E-EBF73DBBD737}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3CDA954D-1586-423A-AC1E-EBF73DBBD737}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7451689C-56E8-44E6-B26C-5D9B8F8756CB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7451689C-56E8-44E6-B26C-5D9B8F8756CB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7451689C-56E8-44E6-B26C-5D9B8F8756CB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7451689C-56E8-44E6-B26C-5D9B8F8756CB}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
