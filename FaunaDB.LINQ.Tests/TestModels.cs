@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using FaunaDB.LINQ.Modeling;
 using FaunaDB.LINQ.Types;
+using Newtonsoft.Json;
 
 namespace FaunaDB.LINQ.Tests
 {
@@ -165,5 +166,44 @@ namespace FaunaDB.LINQ.Tests
     {
         public string Value1 { get; set; }
         public string Value2 { get; set; }
+    }
+
+    public class NamedPropertyModel
+    {
+        [Key]
+        public string Id { get; set; }
+        
+        [JsonProperty("not_a_test_string")]
+        public string TestString { get; set; }
+
+        protected bool Equals(NamedPropertyModel other)
+        {
+            return string.Equals(Id, other.Id) && string.Equals(TestString, other.TestString);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((NamedPropertyModel) obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return ((Id != null ? Id.GetHashCode() : 0) * 397) ^ (TestString != null ? TestString.GetHashCode() : 0);
+            }
+        }
+    }
+
+    public class NamedPropertyModelMapping : FluentTypeConfiguration<NamedPropertyModel>
+    {
+        public NamedPropertyModelMapping()
+        {
+            this.HasKey(a => a.Id)
+                .HasName(a => a.TestString, "not_a_test_string");
+        }
     }
 }

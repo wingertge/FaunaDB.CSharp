@@ -82,10 +82,5 @@ namespace FaunaDB.LINQ.Modeling
         {
             return _configuration;
         }
-
-        private static PropertyInfo GetProperty(Expression<Func<T, object>> property)
-        {
-            return (PropertyInfo) ((MemberExpression) property.Body).Member;
-        }
     }
 }

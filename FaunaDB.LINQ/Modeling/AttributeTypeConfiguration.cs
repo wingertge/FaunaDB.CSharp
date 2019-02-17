@@ -35,7 +35,7 @@ namespace FaunaDB.LINQ.Modeling
                     };
                     continue;
                 }
-
+                
                 if (attributes.Any(a => a is ReferenceAttribute))
                 {
                     configuration[prop] = new TypeConfigurationEntry
@@ -75,6 +75,16 @@ namespace FaunaDB.LINQ.Modeling
                     {
                         Name = "ts",
                         Type = ConfigurationType.Timestamp
+                    };
+                    continue;
+                }
+
+                if (name != null)
+                {
+                    configuration[prop] = new TypeConfigurationEntry
+                    {
+                        Name = name,
+                        Type = ConfigurationType.NameOverride
                     };
                 }
             }

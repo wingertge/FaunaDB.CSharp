@@ -122,8 +122,9 @@ namespace FaunaDB.LINQ.Tests
 
         private static void CatchAllWhereTest_Run(IDbContext client, ref Expr lastQuery)
         {
-            const int i1 = 1;
-            const int i2 = 2;
+            //DO NOT USE CONST HERE, COMPILER OPTIMIZATION WILL BREAK THINGS
+            int i1 = 1;
+            int i2 = 2;
             var q = client.Query<ReferenceModel>(a => a.Indexed1 == "test1").Where(a =>
                 (a.Indexed1 == "test1" && a.Indexed2 != "test2") ||
                 (i2 > i1 && i1 < i2 && i1 <= i2 && i2 >= i1));
@@ -149,7 +150,9 @@ namespace FaunaDB.LINQ.Tests
 
             q.Provider.Execute<object>(q.Expression);
 
-            Assert.Equal(JsonConvert.SerializeObject(lastQuery), JsonConvert.SerializeObject(manual));
+            var generated = JsonConvert.SerializeObject(lastQuery);
+
+            Assert.Equal(JsonConvert.SerializeObject(manual), generated);
         }
 
         [Fact]

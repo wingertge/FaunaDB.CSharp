@@ -207,5 +207,56 @@ namespace FaunaDB.LINQ.Tests
 
             Assert.Equal(model, result);
         }
+
+        [Fact]
+        public void NamedPropertyModelEncodeTest()
+        {
+            IsolationUtils.FakeAttributeClient(NamedPropertyModelEncodeTest_Run);
+            IsolationUtils.FakeManualClient(NamedPropertyModelEncodeTest_Run);
+        }
+        
+        private void NamedPropertyModelEncodeTest_Run(IDbContext context, ref Expr lastQuery)
+        {
+            var model = new NamedPropertyModel
+            {
+                TestString = "test123"
+            };
+            
+            var dict = new Dictionary<string, object>
+            {
+                {"not_a_test_string", "test123"}
+            };
+
+            var manual = Obj(dict);
+            var automatic = context.ToFaunaObj(model);
+            
+            Assert.Equal(JsonConvert.SerializeObject(manual), JsonConvert.SerializeObject(automatic));
+        }
+
+        [Fact]
+        public void NamedPropertyModelDecodeTest()
+        {
+            var dict = new Dictionary<string, object>
+            {
+                {"not_a_test_string", "test123"}
+            };
+            
+            var json = JsonConvert.SerializeObject(new {data = dict});
+            
+            IsolationUtils.FakeAttributeClient<NamedPropertyModel>(NamedPropertyModelDecodeTest_Run, json);
+            IsolationUtils.FakeManualClient<NamedPropertyModel>(NamedPropertyModelDecodeTest_Run, json);
+        }
+        
+        private static void NamedPropertyModelDecodeTest_Run(IDbContext context, ref Expr lastQuery)
+        {
+            var model = new NamedPropertyModel
+            {
+                TestString = "test123"
+            };
+
+            var result = context.Get<NamedPropertyModel>("asdf").Result;
+            
+            Assert.Equal(model, result);
+        }
     }
 }

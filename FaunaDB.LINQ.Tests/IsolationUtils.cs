@@ -81,16 +81,18 @@ namespace FaunaDB.LINQ.Tests
             builder.RegisterReferenceModel<PrimitivesReferenceModel>();
             builder.RegisterReferenceModel<ReferenceTypesReferenceModel>();
             builder.RegisterReferenceModel<ValueTypesReferenceModel>();
+            builder.RegisterReferenceModel<NamedPropertyModel>();
             return builder.Build();
         }
 
         private static IDbContext CreateMappingContext(IFaunaClient mock)
         {
             var builder = DbContext.StartBuilding(mock);
-            builder.RegisterMapping<ReferenceModelMapping, ReferenceModel>();
-            builder.RegisterMapping<PrimitivesReferenceModelMapping, PrimitivesReferenceModel>();
-            builder.RegisterMapping<ReferenceTypesReferenceModelMapping, ReferenceTypesReferenceModel>();
-            builder.RegisterMapping<ValueTypesReferenceModelMapping, ValueTypesReferenceModel>();
+            builder.RegisterMapping<ReferenceModelMapping>();
+            builder.RegisterMapping<PrimitivesReferenceModelMapping>();
+            builder.RegisterMapping<ReferenceTypesReferenceModelMapping>();
+            builder.RegisterMapping<ValueTypesReferenceModelMapping>();
+            builder.RegisterMapping<NamedPropertyModelMapping>();
             return builder.Build();
         }
     }

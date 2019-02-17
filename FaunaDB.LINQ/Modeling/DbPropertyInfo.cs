@@ -8,7 +8,6 @@
 
     public class IndexPropertyInfo : DbPropertyInfo
     {
-        public string IndexName { get; set; }
     }
 
     public enum DbPropertyType

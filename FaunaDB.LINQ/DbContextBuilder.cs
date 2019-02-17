@@ -21,10 +21,10 @@ namespace FaunaDB.LINQ
             _configurations[typeof(T)] = new AttributeTypeConfiguration(typeof(T));
         }
 
-        public void RegisterMapping<TMapping, TModel>() where TMapping : class, IFluentTypeConfiguration<TModel>, new()
+        public void RegisterMapping<TMapping>() where TMapping : class, IFluentTypeConfiguration, new()
         {
             var configInstance = Activator.CreateInstance(typeof(TMapping)) as TMapping;
-            _configurations[typeof(TModel)] = configInstance;
+            _configurations[typeof(TMapping).GetInterface(typeof(IFluentTypeConfiguration<>).Name).GetGenericArguments()[0]] = configInstance;
         }
 
         public IDbContext Build()

@@ -42,7 +42,7 @@ namespace FaunaDB.LINQ.Modeling
                 switch (@override?.Type)
                 {
                     case ConfigurationType.CompositeIndex:
-                        configuration[property] = new IndexPropertyInfo {Name = name, Type = DbPropertyType.CompositeIndex, IndexName = (@override as IndexTypeConfigurationEntry)?.IndexName };
+                        configuration[property] = new IndexPropertyInfo {Name = name, Type = DbPropertyType.CompositeIndex };
                         break;
                     case ConfigurationType.Key:
                         configuration[property] = new DbPropertyInfo {Name = name, Type = DbPropertyType.Key};
@@ -54,7 +54,7 @@ namespace FaunaDB.LINQ.Modeling
                         configuration[property] = new DbPropertyInfo { Name = name, Type = DbPropertyType.Reference };
                         break;
                     case ConfigurationType.Index:
-                        configuration[property] = new IndexPropertyInfo { Name = name, Type = DbPropertyType.PrimitiveIndex, IndexName = (@override as IndexTypeConfigurationEntry)?.IndexName};
+                        configuration[property] = new IndexPropertyInfo { Name = name, Type = DbPropertyType.PrimitiveIndex};
                         break;
                     default:
                         if (property.PropertyType.GetTypeInfo().IsPrimitive || property.PropertyType == typeof(string))
