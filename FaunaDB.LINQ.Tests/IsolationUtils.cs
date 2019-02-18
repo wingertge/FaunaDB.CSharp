@@ -88,6 +88,7 @@ namespace FaunaDB.LINQ.Tests
             builder.RegisterReferenceModel<UnsupportedCustomCollectionModel>();
             builder.RegisterReferenceModel<UnsupportedCustomCollectionModel2>();
             builder.RegisterReferenceModel<UnsupportedCustomCollectionModel3>();
+            builder.RegisterReferenceModel<IncludeModel>();
             return builder.Build();
         }
 
@@ -105,6 +106,7 @@ namespace FaunaDB.LINQ.Tests
             builder.RegisterMapping<UnsupportedCustomCollectionModelMapping>();
             builder.RegisterMapping<UnsupportedCustomCollectionModelMapping2>();
             builder.RegisterMapping<UnsupportedCustomCollectionModelMapping3>();
+            builder.RegisterMapping<IncludeModelMapping>();
             return builder.Build();
         }
     }

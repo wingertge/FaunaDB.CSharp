@@ -96,7 +96,7 @@ namespace FaunaDB.LINQ.Query
         private object HandleInclude(IReadOnlyList<Expression> args, object rest, IDbContext context)
         {
             var lambdaArgName = $"arg{++_lambdaIndex}";
-            var lambda = (LambdaExpression)args[0];
+            var lambda = args[0] is UnaryExpression unary ? (LambdaExpression)unary.Operand : (LambdaExpression)args[0];
             if(!(lambda.Body is MemberExpression)) throw new ArgumentException("Selector must be member expression.");
             var memberExpr = (MemberExpression) lambda.Body;
             if(!(memberExpr.Member is PropertyInfo)) throw new ArgumentException("Selector must be property.");

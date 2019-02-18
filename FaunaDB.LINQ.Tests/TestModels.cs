@@ -414,4 +414,30 @@ namespace FaunaDB.LINQ.Tests
             return GetEnumerator();
         }
     }
+
+    public class IncludeModel
+    {
+        [Key]
+        public string Id { get; set; }
+        
+        [Indexed("index_1")]
+        public string Indexed1 { get; set; }
+        
+        [Reference]
+        public IncludeModel Reference { get; set; }
+        
+        [Reference]
+        public List<IncludeModel> References { get; set; }
+    }
+
+    public class IncludeModelMapping : FluentTypeConfiguration<IncludeModel>
+    {
+        public IncludeModelMapping()
+        {
+            this.HasKey(a => a.Id)
+                .HasIndex(a => a.Indexed1, "index_1")
+                .HasReference(a => a.Reference)
+                .HasReference(a => a.References);
+        }
+    }
 }

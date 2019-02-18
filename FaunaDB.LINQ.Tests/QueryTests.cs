@@ -220,6 +220,79 @@ namespace FaunaDB.LINQ.Tests
         }
 
         [Fact]
+        public void SkipTakeQueryTest()
+        {
+            IsolationUtils.FakeAttributeClient(SkipTakeQueryTest_Run);
+            IsolationUtils.FakeManualClient(SkipTakeQueryTest_Run);
+        }
+
+        private static void SkipTakeQueryTest_Run(IDbContext client, ref Expr lastQuery)
+        {
+            var q = client.Query<ReferenceModel>(a => a.Indexed1 == "test1").Skip(3).Take(4);
+            
+            var selectorManual = Map(Match(Index("index_1"), Arr("test1")), Lambda("arg0", Get(Var("arg0"))));
+            var skipManual = Drop(3, selectorManual);
+            var takeManual = Take(4, skipManual);
+
+            q.Provider.Execute<object>(q.Expression);
+            
+            Assert.Equal(JsonConvert.SerializeObject(lastQuery), JsonConvert.SerializeObject(takeManual));
+        }
+
+        [Fact]
+        public void DistinctQueryTest()
+        {
+            IsolationUtils.FakeAttributeClient(DistinctQueryTest_Run);
+            IsolationUtils.FakeManualClient(DistinctQueryTest_Run);
+        }
+        
+        private static void DistinctQueryTest_Run(IDbContext client, ref Expr lastQuery)
+        {
+            var q = client.Query<ReferenceModel>(a => a.Indexed1 == "test1").Distinct();
+            
+            var selectorManual = Map(Match(Index("index_1"), Arr("test1")), Lambda("arg0", Get(Var("arg0"))));
+            var manual = Distinct(selectorManual);
+            
+            q.Provider.Execute<object>(q.Expression);
+            
+            Assert.Equal(JsonConvert.SerializeObject(lastQuery), JsonConvert.SerializeObject(manual));
+        }
+
+        [Fact]
+        public void IncludeQueryTest()
+        {
+            IsolationUtils.FakeAttributeClient(IncludeQueryTest_Run);
+            IsolationUtils.FakeManualClient(IncludeQueryTest_Run);
+        }
+
+        private static void IncludeQueryTest_Run(IDbContext client, ref Expr lastQuery)
+        {
+            var q = client.Query<IncludeModel>(a => a.Indexed1 == "test1").Include(a => a.Reference).AlsoInclude(a => a.References);
+            
+            var selectorManual = Map(Match(Index("index_1"), Arr("test1")), Lambda("arg0", Get(Var("arg0"))));
+            var includeManual = Map(selectorManual, Lambda("arg1", Obj("ref", Select("ref", Var("arg1")), "ts",
+                Select("ts", Var("arg1")), "data", Obj(
+                    "indexed1", Select(new object[] {"data", "indexed1"}, Var("arg1")),
+                    "reference",
+                    If(Exists(Select(new object[] {"data", "reference"}, Var("arg1"))),
+                        Get(Select(new object[] {"data", "reference"}, Var("arg1"))), null),
+                    "references", Select(new object[] {"data", "references"}, Var("arg1"))))));
+            var includeAlsoManual = Map(includeManual, Lambda("arg2", Obj("ref", Select("ref", Var("arg2")), "ts",
+                Select("ts", Var("arg2")), "data", Obj(
+                    "indexed1", Select(new object[] {"data", "indexed1"}, Var("arg2")),
+                    "reference", Select(new object[] {"data", "reference"}, Var("arg2")),
+                    "references", Map(Select(new object[]{"data", "references"}, Var("arg2")), 
+                        Lambda("arg3", If(Exists(Var("arg3")),
+                            Get(Var("arg3")), null)))))));
+            var manual = JsonConvert.SerializeObject(includeAlsoManual);
+            
+            q.Provider.Execute<object>(q.Expression);
+
+            var automatic = JsonConvert.SerializeObject(lastQuery);
+            Assert.Equal(manual, automatic);
+        }
+
+        [Fact]
         public void QueryFailureTest()
         {
             IsolationUtils.FakeAttributeClient(QueryFailureTest_Run);
