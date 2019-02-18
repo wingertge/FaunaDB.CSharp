@@ -45,7 +45,7 @@ namespace FaunaDB.LINQ.Extensions
                         case ExpressionType.AndAlso:
                             return QueryModel.Intersection(left, right);
                         default:
-                            throw new UnsupportedMethodException(expression.NodeType.ToString());
+                            throw new UnsupportedMethodException("Unsupported binary operator in selector: " + expression.NodeType);
                     }
                 case MemberExpression _ when expression.Right is ConstantExpression:
                 case ConstantExpression _ when expression.Right is MemberExpression:
@@ -56,7 +56,7 @@ namespace FaunaDB.LINQ.Extensions
                         : (ConstantExpression) expression.Left;
                     var args = ObjToParamsOrSingle(constant.Value, context);
                     var mapping = context.Mappings[member.Member.DeclaringType][member.GetPropertyInfo()];
-                    if (mapping.Type != DbPropertyType.PrimitiveIndex || !(mapping is IndexPropertyInfo indexInfo))
+                    if ((mapping.Type != DbPropertyType.PrimitiveIndex && mapping.Type != DbPropertyType.CompositeIndex) || !(mapping is IndexPropertyInfo indexInfo))
                         throw new ArgumentException("Can't use unindexed property for selector!");
                     var indexName = indexInfo.IndexName;
                     return QueryModel.Match(QueryModel.Index(indexName), args);

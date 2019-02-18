@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using FaunaDB.Driver;
+using FaunaDB.LINQ.Errors;
 using FaunaDB.LINQ.Extensions;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using Xunit;
 using static FaunaDB.Driver.QueryModel;
@@ -114,13 +116,13 @@ namespace FaunaDB.LINQ.Tests
         }
 
         [Fact]
-        public void ReferenceTypeWithReferenceTypesTest()
+        public void ReferenceTypeWithReferenceTypesEncodeTest()
         {
-            IsolationUtils.FakeAttributeClient(ReferenceTypeWithReferenceTypesTest_Run);
-            IsolationUtils.FakeManualClient(ReferenceTypeWithReferenceTypesTest_Run);
+            IsolationUtils.FakeAttributeClient(ReferenceTypeWithReferenceTypesEncodeTest_Run);
+            IsolationUtils.FakeManualClient(ReferenceTypeWithReferenceTypesEncodeTest_Run);
         }
 
-        private void ReferenceTypeWithReferenceTypesTest_Run(IDbContext context, ref Expr lastQuery)
+        private void ReferenceTypeWithReferenceTypesEncodeTest_Run(IDbContext context, ref Expr lastQuery)
         {
             var model = new ReferenceTypesReferenceModel
             {
@@ -134,6 +136,69 @@ namespace FaunaDB.LINQ.Tests
                 "reference_models2", new object[] {Ref("test7"), Ref("test9")});
 
             Assert.Equal(JsonConvert.SerializeObject(manual), JsonConvert.SerializeObject(context.ToFaunaObj(model)));
+        }
+
+        [Fact]
+        public void ReferenceTypeWithReferenceTypesDecodeTest()
+        {
+            var referenceModelDict1 = new Dictionary<string, object>
+            {
+                {"indexed2", "test2"}
+            };            
+            var referenceModelDict2 = new Dictionary<string, object>
+            {
+                {"indexed2", "test4"}
+            };            
+            var referenceModelDict3 = new Dictionary<string, object>
+            {
+                {"indexed2", "test6"}
+            };            
+            var referenceModelDict4 = new Dictionary<string, object>
+            {
+                {"indexed2", "test8"}
+            };          
+            var referenceModelDict5 = new Dictionary<string, object>
+            {
+                {"indexed2", "test10"}
+            };
+            var dict = new Dictionary<string, object>
+            {
+                {"reference_model", new {@ref = "test1", data = referenceModelDict1}},
+                {
+                    "reference_models1",
+                    new List<object>
+                    {
+                        new {@ref = "test3", data = referenceModelDict2},
+                        new {@ref = "test5", data = referenceModelDict3}
+                    }
+                },
+                {
+                    "reference_models2",
+                    new[]
+                    {
+                        new {@ref = "test7", data = referenceModelDict4},
+                        new {@ref = "test9", data = referenceModelDict5}
+                    }
+                }
+            };
+
+            var json = JsonConvert.SerializeObject(new {data = dict});
+            
+            IsolationUtils.FakeAttributeClient<ReferenceTypesReferenceModel>(ReferenceTypeWithReferenceTypesDecodeTest_Run, json);
+            IsolationUtils.FakeManualClient<ReferenceTypesReferenceModel>(ReferenceTypeWithReferenceTypesDecodeTest_Run, json);
+        }
+        
+        private static void ReferenceTypeWithReferenceTypesDecodeTest_Run(IDbContext context, ref Expr lastQuery)
+        {
+            var model = new ReferenceTypesReferenceModel
+            {
+                ReferenceModel = new ReferenceModel { Id = "test1", Indexed2 = "test2" },
+                ReferenceModels1 = new List<ReferenceModel> { new ReferenceModel { Id = "test3", Indexed2 = "test4"}, new ReferenceModel { Id = "test5", Indexed2 = "test6" } },
+                ReferenceModels2 = new [] { new ReferenceModel { Id = "test7", Indexed2 = "test8"}, new ReferenceModel { Id = "test9", Indexed2 = "test10" } }
+            };
+            var result = context.Get<ReferenceTypesReferenceModel>("test").Result;
+            
+            Assert.Equal(model, result);
         }
 
         [Fact]
@@ -257,6 +322,68 @@ namespace FaunaDB.LINQ.Tests
             var result = context.Get<NamedPropertyModel>("asdf").Result;
             
             Assert.Equal(model, result);
+        }
+
+        [Fact]
+        public void CustomCollectionDecodeTest()
+        {
+            const string json = "{\"data\": {\"custom_collection\": [\"test1\",\"test2\"]}}";
+            
+            IsolationUtils.FakeAttributeClient<SupportedCustomCollectionModel>(CustomCollectionDecodeTest_Run, json);
+            IsolationUtils.FakeManualClient<SupportedCustomCollectionModel>(CustomCollectionDecodeTest_Run, json);
+        }
+
+        private static void CustomCollectionDecodeTest_Run(IDbContext context, ref Expr lastQuery)
+        {
+            var model = new SupportedCustomCollectionModel {CustomCollection = new SupportedCustomCollection<string>(new []{"test1", "test2"})};
+
+            var result = context.Get<SupportedCustomCollectionModel>("asd").Result;
+            
+            Assert.Equal(model, result);
+        }
+        
+        [Fact]
+        public void CustomCollectionDecodeTest2()
+        {
+            var datesJson = JsonConvert.SerializeObject(new[] {new TimeStampV(DateTime.MinValue), new TimeStampV(DateTime.MaxValue)});
+            var json = "{\"data\": {\"custom_collection\": " + datesJson + ", \"dates_array\": " + datesJson + "}}";
+            
+            IsolationUtils.FakeAttributeClient<SupportedCustomCollectionModel2>(CustomCollectionDecodeTest2_Run, json);
+            IsolationUtils.FakeManualClient<SupportedCustomCollectionModel2>(CustomCollectionDecodeTest2_Run, json);
+        }
+
+        private static void CustomCollectionDecodeTest2_Run(IDbContext context, ref Expr lastQuery)
+        {
+            var model = new SupportedCustomCollectionModel2 {CustomCollection = new SupportedCustomCollection<DateTime>(new []{DateTime.MinValue.ToUniversalTime(), DateTime.MaxValue.ToUniversalTime()}), DatesArray = new [] {DateTime.MinValue, DateTime.MaxValue}};
+
+            var result = context.Get<SupportedCustomCollectionModel2>("asd").Result;
+            
+            Assert.Equal(model, result);
+        }
+
+        [Fact]
+        public void SerializationFailureTest()
+        {
+            IsolationUtils.FakeAttributeClient(SerializationFailureTest_Run);
+            IsolationUtils.FakeManualClient(SerializationFailureTest_Run);
+        }
+
+        private static void SerializationFailureTest_Run(IDbContext context, ref Expr lastQuery)
+        {
+            var model1 = new UnmappedModel { TestString = "test" };
+            Assert.Throws<InvalidMappingException>(() => context.ToFaunaObj(model1));
+            Assert.Throws<InvalidMappingException>(() => context.Decode(JObject.Parse(JsonConvert.SerializeObject(model1)), model1.GetType()));
+
+            var model2 = new ReferenceModel {Indexed1 = null, Indexed2 = "test"};
+            var manual2 = Obj("indexed1", null, "indexed2", "test");
+            Assert.Equal(JsonConvert.SerializeObject(manual2), JsonConvert.SerializeObject(context.ToFaunaObj(model2)));
+            
+            var model3 = new ModelWithUnmappedReference { Model = new UnmappedModel() };
+            Assert.Throws<InvalidMappingException>(() => context.ToFaunaObj(model3));
+
+            Assert.Throws<JsonSerializationException>(() => context.Decode(JObject.Parse("{\"data\": {custom_collection: [null, null, null]}}"), typeof(UnsupportedCustomCollectionModel)));
+            Assert.Throws<InvalidMappingException>(() => context.Decode(JObject.Parse("{\"data\": {custom_collection: [null, null, null]}}"), typeof(UnsupportedCustomCollectionModel2)));
+            Assert.Throws<InvalidMappingException>(() => context.Decode(JObject.Parse("{\"data\": {custom_collection: [null, null, null]}}"), typeof(UnsupportedCustomCollectionModel3)));
         }
     }
 }

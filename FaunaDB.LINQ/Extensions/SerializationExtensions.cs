@@ -100,17 +100,56 @@ namespace FaunaDB.LINQ.Extensions
                     prop.SetValue(obj, DateTime.Parse(current.ToObject<QueryModel.TimeStampV>().Ts.ToString()).ToUniversalTime());
                 else
                 {
-                    if (typeof(IEnumerable).IsAssignableFrom(prop.PropertyType))
+                    if (typeof(IEnumerable).IsAssignableFrom(propType))
                     {
-                        var mapping = context.Mappings[prop.PropertyType.GetElementType() ?? throw new InvalidMappingException("Trying to decode unregistered type.")];
-                        if (mapping.Any(a => a.Value.Type == DbPropertyType.Key))
+                        var elementType = propType.GetInterface(typeof(IEnumerable<>).Name).GetGenericArguments().Single();
+                        TypeConfiguration mapping;
+                        if (elementType.IsPrimitive || elementType == typeof(string) ||
+                            prop.PropertyType == typeof(DateTime))
+                            mapping = null;
+                        else mapping = context.Mappings[elementType ?? throw new InvalidMappingException("Trying to decode unregistered type.")];
+                        if (mapping != null && mapping.Any(a => a.Value.Type == DbPropertyType.Key))
                         {
                             var enumerable = current.ToObject<IEnumerable<JObject>>();
-                            var result = enumerable.Select(item => Decode(context, item, prop.PropertyType.GetElementType()))
-                                .ToList();
-                            prop.SetValue(obj, (dynamic) result);
+                            var result = enumerable.Select(item => Decode(context, item, elementType));
+                            var castMethod = typeof(Enumerable).GetMethod("Cast").MakeGenericMethod(elementType);
+                            var castResult = castMethod.Invoke(null, new object[] {result});
+
+                            if (propType.IsArray)
+                            {
+                                var toArrayMethod = typeof(Enumerable).GetMethod("ToArray").MakeGenericMethod(elementType);
+                                var arrayResult = toArrayMethod.Invoke(null, new[] {castResult});
+                                prop.SetValue(obj, arrayResult);
+                            }
+                            else
+                            {
+                                var constructor = propType.GetConstructor(new[] {typeof(IEnumerable<>).MakeGenericType(elementType)});
+                                if(constructor == null)
+                                    throw new InvalidMappingException("Sorry, custom IEnumerables are only supported if they have a constructor taking an IEnumerable.");
+                                prop.SetValue(obj, constructor.Invoke(new[] {castResult}));
+                            }
                         }
-                        else prop.SetValue(obj, current.ToObject(prop.PropertyType));
+                        else if(elementType == typeof(DateTime))
+                        {
+                            var enumerable = current.ToObject<IEnumerable<QueryModel.TimeStampV>>();
+                            var result = enumerable.Select(a => DateTime.Parse(a.Ts.ToString()).ToUniversalTime());
+                            
+                            if (propType.IsArray)
+                            {
+                                prop.SetValue(obj, result.ToArray());
+                            }
+                            else
+                            {
+                                var constructor = propType.GetConstructor(new[] {typeof(IEnumerable<>).MakeGenericType(elementType)});
+                                if(constructor == null)
+                                    throw new InvalidMappingException("Sorry, custom IEnumerables are only supported if they have a constructor taking an IEnumerable.");
+                                prop.SetValue(obj, constructor.Invoke(new object[] {result}));
+                            }
+                        }
+                        else
+                        {
+                            prop.SetValue(obj, current.ToObject(prop.PropertyType));
+                        }
                     }
                     else prop.SetValue(obj, Decode(context, current, prop.PropertyType));
                 }

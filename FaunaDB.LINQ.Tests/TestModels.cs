@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using FaunaDB.Driver.Errors;
 using FaunaDB.LINQ.Modeling;
 using FaunaDB.LINQ.Types;
 using Newtonsoft.Json;
@@ -149,6 +152,33 @@ namespace FaunaDB.LINQ.Tests
         public List<ReferenceModel> ReferenceModels1 { get; set; }
         [Reference]
         public ReferenceModel[] ReferenceModels2 { get; set; }
+
+        protected bool Equals(ReferenceTypesReferenceModel other)
+        {
+            return string.Equals(Id, other.Id) && Equals(ReferenceModel, other.ReferenceModel) &&
+                   (ReferenceModels1?.SequenceEqual(other.ReferenceModels1) ?? other.ReferenceModels1 == null) && 
+                   (ReferenceModels2?.SequenceEqual(other.ReferenceModels2) ?? other.ReferenceModels2 == null);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((ReferenceTypesReferenceModel) obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = (Id != null ? Id.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (ReferenceModel != null ? ReferenceModel.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (ReferenceModels1 != null ? ReferenceModels1.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (ReferenceModels2 != null ? ReferenceModels2.GetHashCode() : 0);
+                return hashCode;
+            }
+        }
     }
 
     public class ReferenceTypesReferenceModelMapping : FluentTypeConfiguration<ReferenceTypesReferenceModel>
@@ -204,6 +234,184 @@ namespace FaunaDB.LINQ.Tests
         {
             this.HasKey(a => a.Id)
                 .HasName(a => a.TestString, "not_a_test_string");
+        }
+    }
+
+    public class UnmappedModel
+    {
+        [Key]
+        public string Id { get; set; }
+        
+        [JsonProperty("not_a_test_string")]
+        public string TestString { get; set; }
+    }
+
+    public class ModelWithUnmappedReference
+    {
+        [Key]
+        public string Id { get; set; }
+        
+        [Reference]
+        public UnmappedModel Model { get; set; }
+    }
+
+    public class ModelWithUnmappedReferenceMapping : FluentTypeConfiguration<ModelWithUnmappedReference>
+    {
+        public ModelWithUnmappedReferenceMapping()
+        {
+            this.HasKey(a => a.Id)
+                .HasReference(a => a.Model);
+        }
+    }
+
+    public class SupportedCustomCollectionModel
+    {
+        [Key]
+        public string Id { get; set; }
+        public SupportedCustomCollection<string> CustomCollection { get; set; }
+
+        protected bool Equals(SupportedCustomCollectionModel other)
+        {
+            return string.Equals(Id, other.Id) && (CustomCollection?.SequenceEqual(other.CustomCollection) ?? other.CustomCollection == null);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((SupportedCustomCollectionModel) obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return ((Id != null ? Id.GetHashCode() : 0) * 397) ^ (CustomCollection != null ? CustomCollection.GetHashCode() : 0);
+            }
+        }
+    }
+
+    public class SupportedCustomCollectionModelMapping : FluentTypeConfiguration<SupportedCustomCollectionModel>
+    {
+        public SupportedCustomCollectionModelMapping()
+        {
+            this.HasKey(a => a.Id);
+        }
+    }
+    
+    public class SupportedCustomCollectionModel2
+    {
+        [Key]
+        public string Id { get; set; }
+        public SupportedCustomCollection<DateTime> CustomCollection { get; set; }
+        public DateTime[] DatesArray { get; set; }
+        
+        protected bool Equals(SupportedCustomCollectionModel2 other)
+        {
+            return string.Equals(Id, other.Id) && (CustomCollection?.SequenceEqual(other.CustomCollection) ?? other.CustomCollection == null);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((SupportedCustomCollectionModel2) obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return ((Id != null ? Id.GetHashCode() : 0) * 397) ^ (CustomCollection != null ? CustomCollection.GetHashCode() : 0);
+            }
+        }
+    }
+
+    public class SupportedCustomCollectionModelMapping2 : FluentTypeConfiguration<SupportedCustomCollectionModel2>
+    {
+        public SupportedCustomCollectionModelMapping2()
+        {
+            this.HasKey(a => a.Id);
+        }
+    }
+
+    public class UnsupportedCustomCollectionModel
+    {
+        [Key]
+        public string Id { get; set; }
+        public UnsupportedCustomCollection<string> CustomCollection { get; set; }
+    }
+
+    public class UnsupportedCustomCollectionModelMapping : FluentTypeConfiguration<UnsupportedCustomCollectionModel>
+    {
+        public UnsupportedCustomCollectionModelMapping()
+        {
+            this.HasKey(a => a.Id);
+        }
+    }
+    
+    public class UnsupportedCustomCollectionModel2
+    {
+        [Key]
+        public string Id { get; set; }
+        public UnsupportedCustomCollection<ReferenceModel> CustomCollection { get; set; }
+    }
+
+    public class UnsupportedCustomCollectionModelMapping2 : FluentTypeConfiguration<UnsupportedCustomCollectionModel2>
+    {
+        public UnsupportedCustomCollectionModelMapping2()
+        {
+            this.HasKey(a => a.Id);
+        }
+    }
+    
+    public class UnsupportedCustomCollectionModel3
+    {
+        [Key]
+        public string Id { get; set; }
+        public UnsupportedCustomCollection<DateTime> CustomCollection { get; set; }
+    }
+
+    public class UnsupportedCustomCollectionModelMapping3 : FluentTypeConfiguration<UnsupportedCustomCollectionModel3>
+    {
+        public UnsupportedCustomCollectionModelMapping3()
+        {
+            this.HasKey(a => a.Id);
+        }
+    }
+
+    public class SupportedCustomCollection<T> : IEnumerable<T>
+    {
+        internal List<T> WrappedData { get; set; }
+        
+        public SupportedCustomCollection(IEnumerable<T> collection)
+        {
+            WrappedData = new List<T>(collection);
+        }
+
+        public IEnumerator<T> GetEnumerator()
+        {
+            return WrappedData.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
+    }
+
+    public class UnsupportedCustomCollection<T> : IEnumerable<T>
+    {
+        public IEnumerator<T> GetEnumerator()
+        {
+            throw new UnsupportedMethodException("GetEnumerator");
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
         }
     }
 }

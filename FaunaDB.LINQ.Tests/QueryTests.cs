@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using FaunaDB.Driver;
+using FaunaDB.Driver.Errors;
 using FaunaDB.LINQ.Extensions;
 using FaunaDB.LINQ.Modeling;
 using Newtonsoft.Json;
@@ -165,13 +166,18 @@ namespace FaunaDB.LINQ.Tests
 
         private static void SelectStringConcatTest_Run(IDbContext client, ref Expr lastQuery)
         {
-            var q = client.Query<ReferenceModel>(a => a.Indexed1 == "test1").Select(a => a.Indexed1 + "concat");
+            var q1 = client.Query<ReferenceModel>(a => a.Indexed1 == "test1").Select(a => a.Indexed1 + "concat");
+            var q2 = client.Query<ReferenceModel>(a => "test1" == a.Indexed1).Select(a => a.Indexed1 + "concat");
 
             var manual = Map(Map(Match(Index("index_1"), Arr("test1")), Lambda("arg0", Get(Var("arg0")))),
                 Lambda("arg1", Concat(new object[]{Select(Arr("data", "indexed1"), Var("arg1")), "concat"})));
 
-        q.Provider.Execute<object>(q.Expression);
+            q1.Provider.Execute<object>(q1.Expression);
 
+            Assert.Equal(JsonConvert.SerializeObject(lastQuery), JsonConvert.SerializeObject(manual));
+
+            q2.Provider.Execute<object>(q2.Expression);
+            
             Assert.Equal(JsonConvert.SerializeObject(lastQuery), JsonConvert.SerializeObject(manual));
         }
 
@@ -212,6 +218,25 @@ namespace FaunaDB.LINQ.Tests
 
             Assert.Equal(JsonConvert.SerializeObject(lastQuery), JsonConvert.SerializeObject(manual));
         }
+
+        [Fact]
+        public void QueryFailureTest()
+        {
+            IsolationUtils.FakeAttributeClient(QueryFailureTest_Run);
+            IsolationUtils.FakeManualClient(QueryFailureTest_Run);
+        }
+
+        private static void QueryFailureTest_Run(IDbContext client, ref Expr lastQuery)
+        {
+            var i = "";
+
+            Assert.Throws<ArgumentException>(() => client.Query<ReferenceModel>(a => a.Indexed1 != i));
+            Assert.Throws<ArgumentException>(() => client.Query<ReferenceModel>(a => a.Id != DummyMethodCall()));
+            Assert.Throws<ArgumentException>(() => client.Query<ReferenceModel>(a => a.Id != ""));
+            Assert.Throws<UnsupportedMethodException>(() => client.Query<ReferenceModel>(a => a.Indexed1 != "" ^ a.Indexed2 == ""));
+        }
+
+        private static string DummyMethodCall() => "";
 
         private static object[] Arr(params object[] values) => values;
 

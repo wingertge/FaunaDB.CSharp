@@ -48,10 +48,15 @@ namespace FaunaDB.LINQ.Tests
 
         private static void CompositeWithTupleTest_Run(IDbContext client, ref Expr lastQuery)
         {
-            var q = client.Query<ReferenceModel>(a => a.CompositeIndex == Tuple.Create("test1", "test2"));
+            var q1 = client.Query<ReferenceModel>(a => a.CompositeIndex == Tuple.Create("test1", "test2"));
+            var q2 = client.Query<ReferenceModel>(a => Tuple.Create("test1", "test2") == a.CompositeIndex);
 
             var manual = Map(Match(Index("composite_index"), "test1", "test2"), Lambda("arg0", Get(Var("arg0"))));
-            q.Provider.Execute<object>(q.Expression);
+            q1.Provider.Execute<object>(q1.Expression);
+
+            Assert.Equal(JsonConvert.SerializeObject(lastQuery), JsonConvert.SerializeObject(manual));
+            
+            q2.Provider.Execute<object>(q1.Expression);
 
             Assert.Equal(JsonConvert.SerializeObject(lastQuery), JsonConvert.SerializeObject(manual));
         }

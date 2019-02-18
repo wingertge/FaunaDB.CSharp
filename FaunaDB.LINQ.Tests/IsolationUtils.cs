@@ -82,6 +82,12 @@ namespace FaunaDB.LINQ.Tests
             builder.RegisterReferenceModel<ReferenceTypesReferenceModel>();
             builder.RegisterReferenceModel<ValueTypesReferenceModel>();
             builder.RegisterReferenceModel<NamedPropertyModel>();
+            builder.RegisterReferenceModel<ModelWithUnmappedReference>();
+            builder.RegisterReferenceModel<SupportedCustomCollectionModel>();
+            builder.RegisterReferenceModel<SupportedCustomCollectionModel2>();
+            builder.RegisterReferenceModel<UnsupportedCustomCollectionModel>();
+            builder.RegisterReferenceModel<UnsupportedCustomCollectionModel2>();
+            builder.RegisterReferenceModel<UnsupportedCustomCollectionModel3>();
             return builder.Build();
         }
 
@@ -93,6 +99,12 @@ namespace FaunaDB.LINQ.Tests
             builder.RegisterMapping<ReferenceTypesReferenceModelMapping>();
             builder.RegisterMapping<ValueTypesReferenceModelMapping>();
             builder.RegisterMapping<NamedPropertyModelMapping>();
+            builder.RegisterMapping<ModelWithUnmappedReferenceMapping>();
+            builder.RegisterMapping<SupportedCustomCollectionModelMapping>();
+            builder.RegisterMapping<SupportedCustomCollectionModelMapping2>();
+            builder.RegisterMapping<UnsupportedCustomCollectionModelMapping>();
+            builder.RegisterMapping<UnsupportedCustomCollectionModelMapping2>();
+            builder.RegisterMapping<UnsupportedCustomCollectionModelMapping3>();
             return builder.Build();
         }
     }
