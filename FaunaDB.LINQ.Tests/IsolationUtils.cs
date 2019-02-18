@@ -74,7 +74,7 @@ namespace FaunaDB.LINQ.Tests
             test(mock.Object, ref lastQuery);
         }
 
-        private static IDbContext CreateAttributeContext(IFaunaClient mock)
+        internal static IDbContext CreateAttributeContext(IFaunaClient mock)
         {
             var builder = DbContext.StartBuilding(mock);
             builder.RegisterReferenceModel<ReferenceModel>();
@@ -85,7 +85,7 @@ namespace FaunaDB.LINQ.Tests
             return builder.Build();
         }
 
-        private static IDbContext CreateMappingContext(IFaunaClient mock)
+        internal static IDbContext CreateMappingContext(IFaunaClient mock)
         {
             var builder = DbContext.StartBuilding(mock);
             builder.RegisterMapping<ReferenceModelMapping>();

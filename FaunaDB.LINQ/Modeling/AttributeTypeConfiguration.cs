@@ -51,18 +51,20 @@ namespace FaunaDB.LINQ.Modeling
                     var indexName = prop.GetCustomAttribute<IndexedAttribute>().Name;
                     if (prop.PropertyType.Name.StartsWith("CompositeIndex"))
                     {
-                        configuration[prop] = new TypeConfigurationEntry
+                        configuration[prop] = new IndexTypeConfigurationEntry
                         {
                             Name = name,
                             Type = ConfigurationType.CompositeIndex,
+                            IndexName = indexName
                         };
                         continue;
                     }
 
-                    configuration[prop] = new TypeConfigurationEntry
+                    configuration[prop] = new IndexTypeConfigurationEntry
                     {
                         Name = name,
                         Type = ConfigurationType.Index,
+                        IndexName = indexName
                     };
                     continue;
                 }

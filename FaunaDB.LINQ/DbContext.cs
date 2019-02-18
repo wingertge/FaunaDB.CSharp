@@ -11,17 +11,17 @@ namespace FaunaDB.LINQ
     {
         public Dictionary<Type, TypeConfiguration> Mappings { get; set; }
 
-        public IFaunaClient Client { get; set; }
+        private readonly IFaunaClient _client;
 
         public DbContext(IFaunaClient client, Dictionary<Type, TypeConfiguration> mappings)
         {
-            Client = client;
+            _client = client;
             Mappings = mappings;
         }
 
         public virtual async Task<T> Query<T>(Expr query)
         {
-            var result = await Client.Query(query);
+            var result = await _client.Query(query);
             return this.Decode<T>(result);
         }
 

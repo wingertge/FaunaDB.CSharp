@@ -9,6 +9,11 @@ namespace FaunaDB.LINQ.Modeling
         public string Name { get; set; }
     }
 
+    public class IndexTypeConfigurationEntry : TypeConfigurationEntry
+    {
+        public string IndexName { get; set; }
+    }
+
     public enum ConfigurationType
     {
         CompositeIndex,

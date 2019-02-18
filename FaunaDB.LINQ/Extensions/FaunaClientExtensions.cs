@@ -52,9 +52,10 @@ namespace FaunaDB.LINQ.Extensions
                     var member = expression.Left is MemberExpression mem ? mem : (MemberExpression) expression.Right;
                     var constant = expression.Right is ConstantExpression con ? con : (ConstantExpression) expression.Left;
                     var args = ObjToParamsOrSingle(constant.Value, context);
-                    var indexAttr = member.GetPropertyInfo().GetCustomAttribute<IndexedAttribute>();
-                    if(indexAttr == null) throw new ArgumentException("Can't use unindexed property for selector!");
-                    var indexName = indexAttr.Name;
+                    var mapping = context.Mappings[member.Member.DeclaringType][member.GetPropertyInfo()];
+                    if(mapping.Type != DbPropertyType.PrimitiveIndex || !(mapping is IndexPropertyInfo indexInfo))
+                        throw new ArgumentException("Can't use unindexed property for selector!");
+                    var indexName = indexInfo.IndexName;
                     return QueryModel.Match(QueryModel.Index(indexName), args);
                 case MemberExpression _ when expression.Right is MethodCallExpression:
                 case MethodCallExpression _ when expression.Right is MemberExpression:
