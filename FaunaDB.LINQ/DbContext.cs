@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using FaunaDB.Driver;
 using FaunaDB.LINQ.Extensions;
 using FaunaDB.LINQ.Modeling;
 
+[assembly: InternalsVisibleTo("FaunaDB.LINQ.Tests")]
 namespace FaunaDB.LINQ
 {
     public class DbContext : IDbContext
