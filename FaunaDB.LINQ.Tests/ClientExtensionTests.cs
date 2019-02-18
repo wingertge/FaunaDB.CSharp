@@ -165,6 +165,55 @@ namespace FaunaDB.LINQ.Tests
         }
 
         [Fact]
+        public void SelectorFailureTest()
+        {
+            IsolationUtils.FakeAttributeClient(SelectorFailureTest_Run);
+            IsolationUtils.FakeManualClient(SelectorFailureTest_Run);
+        }
+
+        private static void SelectorFailureTest_Run(IDbContext client, ref Expr lastQuery)
+        {
+            Assert.Throws<ArgumentException>(() =>
+            {
+                var task = client.Upsert(new ReferenceModel(), a => bool.Parse(a.Indexed1));
+                task.Wait();
+                var result = task.Result;
+            });
+            
+            Assert.Throws<ArgumentException>(() =>
+            {
+                var task = client.Upsert(new ReferenceModel(), a => bool.Parse(a.Indexed1), "");
+                task.Wait();
+                var result = task.Result;
+            });
+            
+            Assert.Throws<ArgumentException>(() =>
+            {
+                var task = client.Upsert(new ReferenceModel(), a => a.Id, "");
+                task.Wait();
+                var result = task.Result;
+            });
+
+            Assert.Throws<ArgumentException>(() =>
+            {
+                var q = client.Query<ReferenceModel>(a => bool.Parse(a.Indexed1));
+                q.Provider.Execute<ReferenceModel>(q.Expression);
+            });
+            
+            Assert.Throws<ArgumentException>(() =>
+            {
+                var q = client.Query<ReferenceModel>(a => bool.Parse(a.Indexed1), "");
+                q.Provider.Execute<ReferenceModel>(q.Expression);
+            });
+            
+            Assert.Throws<ArgumentException>(() =>
+            {
+                var q = client.Query<ReferenceModel>(a => a.Id, "");
+                q.Provider.Execute<ReferenceModel>(q.Expression);
+            });
+        }
+
+        [Fact]
         public void DeleteTest()
         {
             IsolationUtils.FakeAttributeClient(DeleteTest_Run);

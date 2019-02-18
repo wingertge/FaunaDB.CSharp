@@ -49,24 +49,33 @@ namespace FaunaDB.LINQ.Extensions
                     }
                 case MemberExpression _ when expression.Right is ConstantExpression:
                 case ConstantExpression _ when expression.Right is MemberExpression:
+                {
                     var member = expression.Left is MemberExpression mem ? mem : (MemberExpression) expression.Right;
-                    var constant = expression.Right is ConstantExpression con ? con : (ConstantExpression) expression.Left;
+                    var constant = expression.Right is ConstantExpression con
+                        ? con
+                        : (ConstantExpression) expression.Left;
                     var args = ObjToParamsOrSingle(constant.Value, context);
                     var mapping = context.Mappings[member.Member.DeclaringType][member.GetPropertyInfo()];
-                    if(mapping.Type != DbPropertyType.PrimitiveIndex || !(mapping is IndexPropertyInfo indexInfo))
+                    if (mapping.Type != DbPropertyType.PrimitiveIndex || !(mapping is IndexPropertyInfo indexInfo))
                         throw new ArgumentException("Can't use unindexed property for selector!");
                     var indexName = indexInfo.IndexName;
                     return QueryModel.Match(QueryModel.Index(indexName), args);
+                }
                 case MemberExpression _ when expression.Right is MethodCallExpression:
                 case MethodCallExpression _ when expression.Right is MemberExpression:
-                    var member1 = expression.Left is MemberExpression mem1 ? mem1 : (MemberExpression)expression.Right;
-                    var method = expression.Right is MethodCallExpression meth ? meth : (MethodCallExpression)expression.Left;
+                {
+                    var member = expression.Left is MemberExpression mem1 ? mem1 : (MemberExpression) expression.Right;
+                    var method = expression.Right is MethodCallExpression meth
+                        ? meth
+                        : (MethodCallExpression) expression.Left;
                     var methodValue = Expression.Lambda(method).Compile().DynamicInvoke();
                     var args1 = ObjToParamsOrSingle(methodValue, context);
-                    var indexAttr1 = member1.GetPropertyInfo().GetCustomAttribute<IndexedAttribute>();
-                    if (indexAttr1 == null) throw new ArgumentException("Can't use unindexed property for selector!");
-                    var indexName1 = indexAttr1.Name;
+                    var mapping = context.Mappings[member.Member.DeclaringType][member.GetPropertyInfo()];
+                    if ((mapping.Type != DbPropertyType.PrimitiveIndex && mapping.Type != DbPropertyType.CompositeIndex) || !(mapping is IndexPropertyInfo indexInfo))
+                        throw new ArgumentException("Can't use unindexed property for selector!");
+                    var indexName1 = indexInfo.IndexName;
                     return QueryModel.Match(QueryModel.Index(indexName1), args1);
+                }
             }
 
             throw new ArgumentException("Invalid format for selector. Has to be tree of index selector operations.");
@@ -77,9 +86,10 @@ namespace FaunaDB.LINQ.Extensions
             if(!(index.Body is MemberExpression member)) throw new ArgumentException("Index selector must be a member.");
 
             var propInfo = member.GetPropertyInfo();
-            var indexAttr = propInfo.GetCustomAttribute<IndexedAttribute>();
-            if (indexAttr == null) throw new ArgumentException("Can't use unindexed property as selector!", nameof(index));
-            var indexName = indexAttr.Name;
+            var mapping = context.Mappings[propInfo.DeclaringType][propInfo];
+            if ((mapping.Type != DbPropertyType.PrimitiveIndex && mapping.Type != DbPropertyType.CompositeIndex) || !(mapping is IndexPropertyInfo indexInfo))
+                throw new ArgumentException("Can't use unindexed property for selector!");
+            var indexName = indexInfo.IndexName;
 
             return context.Query<T>(indexName, args);
         }
@@ -137,9 +147,9 @@ namespace FaunaDB.LINQ.Extensions
             if (!(indexSelector.Body is MemberExpression member)) throw new ArgumentException("Index selector must be a member.");
 
             var propInfo = member.GetPropertyInfo();
-            var indexAttr = propInfo.GetCustomAttribute<IndexedAttribute>();
-            if (indexAttr == null) throw new ArgumentException("Can't use unindexed property as selector!", nameof(indexSelector));
-            var indexName = indexAttr.Name;
+            var mapping = context.Mappings[propInfo.DeclaringType][propInfo];
+            if ((mapping.Type != DbPropertyType.PrimitiveIndex && mapping.Type != DbPropertyType.CompositeIndex) || !(mapping is IndexPropertyInfo indexInfo)) throw new ArgumentException("Can't use unindexed property as selector!", nameof(indexSelector));
+            var indexName = indexInfo.IndexName;
 
             return Upsert(context, obj, indexName, args);
         }
