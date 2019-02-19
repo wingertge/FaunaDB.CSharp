@@ -7,6 +7,7 @@ using FaunaDB.Driver.Errors;
 using FaunaDB.LINQ.Extensions;
 using FaunaDB.LINQ.Modeling;
 using FaunaDB.LINQ.Types;
+using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using Xunit;
@@ -423,6 +424,28 @@ namespace FaunaDB.LINQ.Tests
             
             Assert.Equal(manual, automatic); 
         }
+
+        [Fact]
+        public void NewObjectQueryTest()
+        {
+            IsolationUtils.FakeAttributeClient(NewObjectQueryTest_Run);
+            IsolationUtils.FakeManualClient(NewObjectQueryTest_Run);
+        }
+        
+        private static void NewObjectQueryTest_Run(IDbContext client, ref Expr lastQuery)
+        {
+            var q = client.Query<ReferenceModel>(a => a.Indexed1 == "test1")
+                .Select(a => new ConstructorTestModel("test").ConstMember);
+            
+            var selectorManual = Map(Match(Index("index_1"), Arr("test1")), Lambda("arg0", Get(Var("arg0"))));
+            var selectManual = Map(selectorManual, Lambda("arg1", Obj("const_member", "test", "key", null)));
+            var manual = JsonConvert.SerializeObject(selectManual);
+
+            q.Provider.Execute<object>(q.Expression);
+            var automatic = JsonConvert.SerializeObject(lastQuery);
+            
+            Assert.Equal(manual, automatic);
+        }
         
         [Fact]
         public void QueryFailureTest()
@@ -472,6 +495,12 @@ namespace FaunaDB.LINQ.Tests
             Assert.Throws<UnsupportedMethodException>(() =>
             {
                 var q = client.Query<IncludeModel>(a => a.Indexed1 == "test1").Select(Expression.Lambda<Func<IncludeModel, double>>(Expression.Power(Expression.Constant(1.0), Expression.Constant(2.0)), Expression.Parameter(typeof(IncludeModel))));
+                q.Provider.Execute<object>(q.Expression);
+            });
+            var s = "";
+            Assert.Throws<UnsupportedMethodException>(() =>
+            {
+                var q = client.Query<IncludeModel>(a => a.Indexed1 == "test1").Select(a => new ConstructorTestModel(s));
                 q.Provider.Execute<object>(q.Expression);
             });
         }

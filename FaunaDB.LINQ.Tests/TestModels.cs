@@ -442,4 +442,20 @@ namespace FaunaDB.LINQ.Tests
                 .HasReference(a => a.References);
         }
     }
+    
+    public class ConstructorTestModel
+    {
+        public ConstructorTestModel(string constMember)
+        {
+            ConstMember = constMember;
+        }
+
+        public string ConstMember { get; set; }
+        public string Key { get; set; }
+    }
+
+    public class ConstructorTestModelMapping : FluentTypeConfiguration<ConstructorTestModel>
+    {
+            
+    }
 }
