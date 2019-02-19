@@ -313,7 +313,8 @@ namespace FaunaDB.LINQ.Query
         {
             var methodInfo = methodCall.Method;
             if ((methodCall.Object == null || methodCall.Object is ConstantExpression)
-                && methodCall.Arguments.All(a => a is ConstantExpression))
+                && methodCall.Arguments.All(a => a is ConstantExpression || a is MemberExpression) 
+                && methodCall.Arguments.OfType<MemberExpression>().All(a => a.Expression is ConstantExpression))
             {
                 var fixedParams = FixConstantParameters(methodCall.Arguments);
                 var callTarget = (methodCall.Object as ConstantExpression)?.Value;
@@ -338,7 +339,8 @@ namespace FaunaDB.LINQ.Query
 
         private object Visit(NewExpression newExpr)
         {
-            if (!newExpr.Arguments.All(a => a is ConstantExpression))
+            if (newExpr.Arguments.Any(a => a is ParameterExpression) || !newExpr.Arguments
+                    .OfType<MemberExpression>().All(a => a.Expression is ConstantExpression))
                 throw new UnsupportedMethodException(newExpr.Constructor.DeclaringType + ".ctor",
                     "Parameterised constructor with variable parameters not supported.");
 
@@ -413,6 +415,34 @@ namespace FaunaDB.LINQ.Query
             }
         }
 
-        private static object[] FixConstantParameters(IEnumerable<Expression> args) => args.Cast<ConstantExpression>().Select(a => a.Value).ToArray();
+        private static object[] FixConstantParameters(IEnumerable<Expression> args)
+        {
+            var fixedParams = new List<object>();
+            foreach (var argument in args)
+            {
+                switch (argument)
+                {
+                    case ConstantExpression constantArg:
+                        fixedParams.Add(constantArg.Value);
+                        break;
+                    case MemberExpression memberArg:
+                        var obj = ((ConstantExpression) memberArg.Expression).Value;
+                        switch (memberArg.Member)
+                        {
+                            case PropertyInfo propInfo:
+                                fixedParams.Add(propInfo.GetValue(obj));
+                                break;
+                            case FieldInfo fieldInfo:
+                                fixedParams.Add(fieldInfo.GetValue(obj));
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException();
+                        }
+                        break;
+                }
+            }
+
+            return fixedParams.ToArray();
+        }
     }
 }
