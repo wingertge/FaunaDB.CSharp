@@ -339,7 +339,7 @@ namespace FaunaDB.LINQ.Query
 
         private object Visit(NewExpression newExpr)
         {
-            if (newExpr.Arguments.Any(a => a is ParameterExpression) || !newExpr.Arguments
+            if (!newExpr.Arguments.All(a => a is ConstantExpression || a is MemberExpression) || !newExpr.Arguments
                     .OfType<MemberExpression>().All(a => a.Expression is ConstantExpression))
                 throw new UnsupportedMethodException(newExpr.Constructor.DeclaringType + ".ctor",
                     "Parameterised constructor with variable parameters not supported.");

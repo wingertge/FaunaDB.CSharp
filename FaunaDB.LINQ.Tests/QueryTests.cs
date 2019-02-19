@@ -434,11 +434,12 @@ namespace FaunaDB.LINQ.Tests
         
         private static void NewObjectQueryTest_Run(IDbContext client, ref Expr lastQuery)
         {
+            var s = "test";
             var q = client.Query<ReferenceModel>(a => a.Indexed1 == "test1")
-                .Select(a => new ConstructorTestModel("test").ConstMember);
+                .Select(a => new ConstructorTestModel(s));
             
             var selectorManual = Map(Match(Index("index_1"), Arr("test1")), Lambda("arg0", Get(Var("arg0"))));
-            var selectManual = Map(selectorManual, Lambda("arg1", Obj("const_member", "test", "key", null)));
+            var selectManual = Map(selectorManual, Lambda("arg1", Obj("test_string", "test", "key", null)));
             var manual = JsonConvert.SerializeObject(selectManual);
 
             q.Provider.Execute<object>(q.Expression);
@@ -495,12 +496,6 @@ namespace FaunaDB.LINQ.Tests
             Assert.Throws<UnsupportedMethodException>(() =>
             {
                 var q = client.Query<IncludeModel>(a => a.Indexed1 == "test1").Select(Expression.Lambda<Func<IncludeModel, double>>(Expression.Power(Expression.Constant(1.0), Expression.Constant(2.0)), Expression.Parameter(typeof(IncludeModel))));
-                q.Provider.Execute<object>(q.Expression);
-            });
-            var s = "";
-            Assert.Throws<UnsupportedMethodException>(() =>
-            {
-                var q = client.Query<IncludeModel>(a => a.Indexed1 == "test1").Select(a => new ConstructorTestModel(s));
                 q.Provider.Execute<object>(q.Expression);
             });
         }

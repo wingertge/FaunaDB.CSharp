@@ -445,12 +445,12 @@ namespace FaunaDB.LINQ.Tests
     
     public class ConstructorTestModel
     {
-        public ConstructorTestModel(string constMember)
+        public ConstructorTestModel(string testString)
         {
-            ConstMember = constMember;
+            TestString = testString;
         }
 
-        public string ConstMember { get; set; }
+        public string TestString { get; set; }
         public string Key { get; set; }
     }
 
