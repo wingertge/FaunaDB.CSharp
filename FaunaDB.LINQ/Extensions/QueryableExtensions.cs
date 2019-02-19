@@ -12,7 +12,7 @@ namespace FaunaDB.LINQ.Extensions
 {
     public static class QueryableExtensions
     {
-        internal static readonly MethodInfo PaginateMethodInfo =
+        private static readonly MethodInfo PaginateMethodInfo =
             typeof(QueryableExtensions).GetTypeInfo().GetDeclaredMethod(nameof(Paginate));
 
         public static IQueryable<T> Paginate<T>(this IQueryable<T> source, string fromRef = "",
@@ -30,7 +30,7 @@ namespace FaunaDB.LINQ.Extensions
             );
         }
 
-        internal static readonly MethodInfo IncludeMethodInfo =
+        private static readonly MethodInfo IncludeMethodInfo =
             typeof(QueryableExtensions).GetTypeInfo().GetDeclaredMethod(nameof(Include));
 
         public static IIncludeQuery<T, TSelected> Include<T, TSelected>(this IQueryable<T> source, Expression<Func<T, TSelected>> selector)
@@ -43,7 +43,7 @@ namespace FaunaDB.LINQ.Extensions
             ));
         }
 
-        internal static readonly MethodInfo AlsoIncludeMethodInfo =
+        private static readonly MethodInfo AlsoIncludeMethodInfo =
             typeof(QueryableExtensions).GetTypeInfo().GetDeclaredMethod(nameof(AlsoInclude));
 
         public static IIncludeQuery<TOrigin, TSelected> AlsoInclude<TOrigin, TCurrent, TSelected>(this IIncludeQuery<TOrigin, TCurrent> source, Expression<Func<TCurrent, TSelected>> selector)
@@ -56,10 +56,10 @@ namespace FaunaDB.LINQ.Extensions
             ));
         }
 
-        internal static readonly MethodInfo FromQueryMethodInfo =
+        private static readonly MethodInfo FromQueryMethodInfo =
             typeof(QueryableExtensions).GetTypeInfo().GetDeclaredMethod(nameof(FromQuery));
 
-        public static IQueryable<TOut> FromQuery<TIn, TOut>(this IQueryable<TIn> source, Expr query)
+        public static IQueryable<TOut> FromQuery<TIn, TOut>(this IQueryable<TIn> source, Func<object, Expr> query)
         {
             return source.Provider.CreateQuery<TOut>(Expression.Call(
                 null,
@@ -69,16 +69,16 @@ namespace FaunaDB.LINQ.Extensions
             ));
         }
 
-        internal static readonly MethodInfo AtMethodInfo =
+        private static readonly MethodInfo AtMethodInfo =
             typeof(QueryableExtensions).GetTypeInfo().GetDeclaredMethod(nameof(At));
 
         public static IQueryable<T> At<T>(this IQueryable<T> source, DateTime timeStamp)
         {
             return source.Provider.CreateQuery<T>(Expression.Call(
                 null,
-                FromQueryMethodInfo.MakeGenericMethod(typeof(T)),
+                AtMethodInfo.MakeGenericMethod(typeof(T)),
                 source.Expression,
-                Expression.Constant(timeStamp)
+                Expression.Constant(timeStamp.ToUniversalTime())
             ));
         }
 
@@ -99,10 +99,10 @@ namespace FaunaDB.LINQ.Extensions
             return result.Any();
         }
 
-        internal static readonly MethodInfo GetAllMethodInfo =
+        private static readonly MethodInfo GetAllMethodInfo =
             typeof(QueryableExtensions).GetTypeInfo().GetDeclaredMethod(nameof(GetAll));
 
-        internal static IQueryable<T> GetAll<T>(this IQueryable<T> source)
+        private static IQueryable<T> GetAll<T>(this IQueryable<T> source)
         {
             return source.Provider.CreateQuery<T>(Expression.Call(
                 instance: null,

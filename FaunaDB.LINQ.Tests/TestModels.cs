@@ -428,6 +428,8 @@ namespace FaunaDB.LINQ.Tests
         
         [Reference]
         public List<IncludeModel> References { get; set; }
+
+        public string Field;
     }
 
     public class IncludeModelMapping : FluentTypeConfiguration<IncludeModel>

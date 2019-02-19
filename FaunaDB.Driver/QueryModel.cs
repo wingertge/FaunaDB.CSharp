@@ -781,6 +781,11 @@ namespace FaunaDB.Driver
             return new TimeO(str);
         }
 
+        public static Expr Time(DateTime time)
+        {
+            return new TimeO(time);
+        }
+
         public class TimeO : Expr
         {
             public object Time { get; set; }
@@ -788,6 +793,11 @@ namespace FaunaDB.Driver
             public TimeO(object time)
             {
                 Time = time;
+            }
+
+            public TimeO(DateTime time)
+            {
+                Time = time.ToUniversalTime().ToString("O");
             }
         }
 

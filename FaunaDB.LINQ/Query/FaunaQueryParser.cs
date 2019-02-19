@@ -81,13 +81,13 @@ namespace FaunaDB.LINQ.Query
                     current = HandleInclude(args, rest, _context);
                     break;
                 case "FromQuery":
-                    current = (Expr) ((ConstantExpression) args[0]).Value;
+                    current = ((Func<object, Expr>)((ConstantExpression) args[0]).Value).Invoke(rest);
                     break;
                 case "At":
                     current = QueryModel.At(_context.ToFaunaObjOrPrimitive((DateTime) ((ConstantExpression) args[0]).Value), rest);
                     break;
                 default:
-                    throw new ArgumentException($"Unsupported method {method}.");
+                    throw new UnsupportedMethodException($"Unsupported method {method}.");
             }
 
             return current;
@@ -197,8 +197,6 @@ namespace FaunaDB.LINQ.Query
                     return QueryModel.LTE(left, right);
                 case ExpressionType.Coalesce:
                     return QueryModel.If(QueryModel.EqualsFn(left, null), right, left);
-                case ExpressionType.Power:
-                    throw new UnsupportedMethodException(binary.NodeType.ToString(), CurrentlyUnsupportedError);
                 case ExpressionType.ExclusiveOr:
                 case ExpressionType.LeftShift:
                 case ExpressionType.RightShift:
@@ -324,7 +322,7 @@ namespace FaunaDB.LINQ.Query
                 methodInfo.Invoke(callTarget, fixedParams);
             }
             if (!methodInfo.IsStatic)
-                throw new ArgumentException("Can't call member method in FaunaDB query.");
+                throw new UnsupportedMethodException("Can't call member method in FaunaDB query.");
 
             if (BuiltInFunctions.ContainsKey((methodInfo.DeclaringType, methodInfo.Name)))
                 return BuiltInFunctions[(methodInfo.DeclaringType, methodInfo.Name)](methodCall.Arguments.Select(a => Accept(a, varName)).ToArray());
