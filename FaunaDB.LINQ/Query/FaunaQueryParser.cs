@@ -209,7 +209,6 @@ namespace FaunaDB.LINQ.Query
             }
         }
         
-        private object Visit(BlockExpression block, string varName) => QueryModel.Do(block.Expressions.Select(a => Accept(a, varName)).Cast<Expr>().ToArray());
         private object Visit(ConditionalExpression conditional, string varName) => QueryModel.If(Accept(conditional.Test, varName), Accept(conditional.IfTrue, varName), Accept(conditional.IfFalse, varName));
         private object Visit(ConstantExpression constant) => _context.ToFaunaObjOrPrimitive(constant.Value);
         private object Visit(DefaultExpression defaultExp) => _context.ToFaunaObjOrPrimitive(Expression.Lambda(defaultExp).Compile().DynamicInvoke());
@@ -314,7 +313,7 @@ namespace FaunaDB.LINQ.Query
         {
             var methodInfo = methodCall.Method;
             if ((methodCall.Object == null || methodCall.Object is ConstantExpression)
-                && !methodCall.Arguments.Any(a => a is ParameterExpression) 
+                && methodCall.Arguments.All(a => a is ConstantExpression || a is MemberExpression) 
                 && methodCall.Arguments.OfType<MemberExpression>().All(a => a.Expression is ConstantExpression))
             {
                 var fixedParams = FixConstantParameters(methodCall.Arguments);
@@ -335,15 +334,7 @@ namespace FaunaDB.LINQ.Query
 
         private object Visit(NewArrayExpression newArray, string varName)
         {
-            switch (newArray.NodeType)
-            {
-                case ExpressionType.NewArrayBounds:
-                    return Activator.CreateInstance(newArray.Type.MakeArrayType(), (int)((ConstantExpression)newArray.Expressions[0]).Value);
-                case ExpressionType.NewArrayInit:
-                    return newArray.Expressions.Select(a => Accept(a, varName));
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
+            return newArray.NodeType == ExpressionType.NewArrayInit ? newArray.Expressions.Select(a => Accept(a, varName)) : Activator.CreateInstance(newArray.Type.MakeArrayType(), (int)((ConstantExpression)newArray.Expressions[0]).Value);
         }
 
         private object Visit(NewExpression newExpr)
@@ -404,7 +395,6 @@ namespace FaunaDB.LINQ.Query
             switch (expression)
             {
                 case BinaryExpression binary: return Visit(binary, varName);
-                case BlockExpression block: return Visit(block, varName);
                 case ConditionalExpression conditional: return Visit(conditional, varName);
                 case ConstantExpression constant: return Visit(constant);
                 case DefaultExpression defaultExp: return Visit(defaultExp);

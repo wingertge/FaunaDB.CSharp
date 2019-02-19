@@ -381,6 +381,50 @@ namespace FaunaDB.LINQ.Tests
         }
 
         [Fact]
+        public void ConditionalQueryTest()
+        {
+            IsolationUtils.FakeAttributeClient(ConditionalQueryTest_Run);
+            IsolationUtils.FakeManualClient(ConditionalQueryTest_Run);
+        }
+
+        private static void ConditionalQueryTest_Run(IDbContext client, ref Expr lastQuery)
+        {
+            var q = client.Query<ReferenceModel>(a => a.Indexed1 == "test1").Select(a => a.Indexed1 != "b" ? a.Indexed1 : "b");
+            var selectorManual = Map(Match(Index("index_1"), Arr("test1")), Lambda("arg0", Get(Var("arg0"))));
+            var selectManual = Map(selectorManual,
+                Lambda("arg1",
+                    If(Not(EqualsFn(Select(new object[] {"data", "indexed1"}, Var("arg1")), "b")),
+                        Select(new object[] {"data", "indexed1"}, Var("arg1")), "b")));
+            var manual = JsonConvert.SerializeObject(selectManual);
+
+            q.Provider.Execute<object>(q.Expression);
+            var automatic = JsonConvert.SerializeObject(lastQuery);
+            
+            Assert.Equal(manual, automatic);
+        }
+
+        [Fact]
+        public void ArrayInitQueryTest()
+        {
+            IsolationUtils.FakeAttributeClient(ArrayInitQueryTest_Run);
+            IsolationUtils.FakeManualClient(ArrayInitQueryTest_Run);
+        }
+        
+        private static void ArrayInitQueryTest_Run(IDbContext client, ref Expr lastQuery)
+        {
+            var q = client.Query<ReferenceModel>(a => a.Indexed1 == "test1").Select(a => Tuple.Create(new object[1], new object[]{"test1", "test2"}));
+            
+            var selectorManual = Map(Match(Index("index_1"), Arr("test1")), Lambda("arg0", Get(Var("arg0"))));
+            var selectManual = Map(selectorManual, Lambda("arg1", new object[] {new object[]{null}, new object[]{"test1", "test2"}}));
+            var manual = JsonConvert.SerializeObject(selectManual);
+            
+            q.Provider.Execute<object>(q.Expression);
+            var automatic = JsonConvert.SerializeObject(lastQuery);
+            
+            Assert.Equal(manual, automatic); 
+        }
+        
+        [Fact]
         public void QueryFailureTest()
         {
             IsolationUtils.FakeAttributeClient(QueryFailureTest_Run);
