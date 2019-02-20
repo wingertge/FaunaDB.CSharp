@@ -255,8 +255,6 @@ namespace FaunaDB.LINQ.Query
             var parent = member.Expression as MemberExpression;
             var parentPropInfo = parent.Member as PropertyInfo ??
                                  throw new ArgumentException("Can't use fields as selectors");
-            if (!_context.Mappings.ContainsKey(parent.Member.DeclaringType ?? typeof(object)))
-                return false;
 
             return _context.Mappings[parent.Member.DeclaringType][parentPropInfo].Type == DbPropertyType.Reference;
         }
