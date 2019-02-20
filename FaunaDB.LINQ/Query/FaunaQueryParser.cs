@@ -338,23 +338,9 @@ namespace FaunaDB.LINQ.Query
 
         private static object Visit(TypeBinaryExpression typeBinary)
         {
-            switch (typeBinary.Expression)
-            {
-                case ConstantExpression constType:
-                    return typeBinary.TypeOperand.IsAssignableFrom((Type) constType.Value);
-                case MemberExpression memberType when memberType.Expression is ConstantExpression cExp:
-                    switch (memberType.Member)
-                    {
-                        case FieldInfo field:
-                            return typeBinary.TypeOperand.IsAssignableFrom((Type)field.GetValue(cExp.Value));
-                        case PropertyInfo prop:
-                            return typeBinary.TypeOperand.IsAssignableFrom((Type)prop.GetValue(cExp.Value));
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
+            if(IsDatabaseSide(typeBinary.Expression))
+                throw new UnsupportedMethodException("Type checking operator unsupported on Database side data.");
+            return Expression.Lambda<Func<bool>>(typeBinary).Compile().Invoke();
         }
 
         private object Visit(UnaryExpression unary, string varName)
