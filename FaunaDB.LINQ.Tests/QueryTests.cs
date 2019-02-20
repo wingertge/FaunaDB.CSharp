@@ -436,10 +436,10 @@ namespace FaunaDB.LINQ.Tests
         {
             var s = "test";
             var q = client.Query<ReferenceModel>(a => a.Indexed1 == "test1")
-                .Select(a => new ConstructorTestModel(s));
+                .Select(a => new ConstructorTestModel(s).TestString);
             
             var selectorManual = Map(Match(Index("index_1"), Arr("test1")), Lambda("arg0", Get(Var("arg0"))));
-            var selectManual = Map(selectorManual, Lambda("arg1", Obj("test_string", "test", "key", null)));
+            var selectManual = Map(selectorManual, Lambda("arg1", "test"));
             var manual = JsonConvert.SerializeObject(selectManual);
 
             q.Provider.Execute<object>(q.Expression);

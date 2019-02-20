@@ -227,60 +227,30 @@ namespace FaunaDB.LINQ.Query
 
         private object Visit(MemberExpression member, string varName)
         {
-            switch (member.Member)
-                    {
-                        case FieldInfo field:
-                            switch (member.Expression)
-                            {
-                                case ConstantExpression constRoot:
-                                    return _context.ToFaunaObjOrPrimitive(field.GetValue(constRoot.Value));
-                                case ParameterExpression _:
-                                    throw new InvalidOperationException("Can't use selector on field of model. Use a property instead.");
-                                case MemberExpression memberRoot:
-                                    return Accept(memberRoot, varName);
-                                default:
-                                    throw new ArgumentOutOfRangeException(); ;
-                            }
-                        case PropertyInfo property:
-                            var mapping = _context.Mappings[property.DeclaringType][property];
-                            switch (member.Expression)
-                            {
-                                case ConstantExpression constRoot:
-                                    return _context.ToFaunaObjOrPrimitive(property.GetValue(constRoot.Value));
-                                case ParameterExpression _:
-                                    var isReference = mapping.Type == DbPropertyType.Reference;
-                                    if(!isReference) return QueryModel.Select(mapping.GetFaunaFieldPath(), QueryModel.Var(varName));
-                                    return typeof(IEnumerable).IsAssignableFrom(property.PropertyType)
-                                        ? QueryModel.Map(
-                                            QueryModel.Select(mapping.GetFaunaFieldPath(), QueryModel.Var(varName)),
-                                            QueryModel.Lambda($"arg{++_lambdaIndex}",
-                                                QueryModel.Map(QueryModel.Var($"arg{_lambdaIndex}"),
-                                                    QueryModel.Lambda($"arg{++_lambdaIndex}", QueryModel.Get(QueryModel.Var($"arg{_lambdaIndex}")))
-                                                )))
-                                        : QueryModel.Map(
-                                            QueryModel.Select(mapping.GetFaunaFieldPath(), QueryModel.Var(varName)),
-                                            QueryModel.Lambda($"arg{++_lambdaIndex}", QueryModel.Get($"arg{_lambdaIndex}")));
-                                case MemberExpression memberRoot:
-                                    switch (memberRoot.Member)
-                                    {
-                                        case FieldInfo _:
-                                            return Accept(memberRoot, varName);
-                                        case PropertyInfo prop:
-                                            return _context.IsReferenceType(prop.PropertyType)
-                                                ? QueryModel.Map(
-                                                    QueryModel.Select(mapping.GetFaunaFieldPath(),
-                                                        Accept(memberRoot, varName)),
-                                                    QueryModel.Lambda($"arg{++_lambdaIndex}", QueryModel.Get(QueryModel.Var($"arg{_lambdaIndex}"))))
-                                                : QueryModel.Select(mapping.GetFaunaFieldPath(), Accept(memberRoot, varName));
-                                        default:
-                                            throw new ArgumentOutOfRangeException();
-                                    }
-                                default:
-                                    return Accept(member.Expression, varName);
-                            }
-                        default:
-                            throw new ArgumentOutOfRangeException(); ;
-                    }
+            if (!IsDatabaseSide(member))
+                return _context.ToFaunaObjOrPrimitive(GetLocalVariableValue(member));
+            var memberInfo = member.Member;
+            if(!(memberInfo is PropertyInfo prop))
+                throw new ArgumentException("Can't use fields as selector.");
+            var rest = Accept(member.Expression, varName);
+            if (_context.Mappings.ContainsKey(member.Member.DeclaringType ?? typeof(object)))
+            {
+                var mapping = _context.Mappings[member.Member.DeclaringType][prop];
+                if (mapping.Type != DbPropertyType.Reference)
+                    return QueryModel.Select(mapping.GetFaunaFieldPath(), rest);
+                if (typeof(IEnumerable).IsAssignableFrom(prop.PropertyType))
+                {
+                    return QueryModel.Map(QueryModel.Select(mapping.GetFaunaFieldPath(), rest),
+                        QueryModel.Lambda($"arg{++_lambdaIndex}",
+                            QueryModel.Map(QueryModel.Var($"arg{_lambdaIndex}"),
+                                QueryModel.Lambda($"arg{++_lambdaIndex}",
+                                    QueryModel.Get(QueryModel.Var($"arg{++_lambdaIndex}"))))));
+                }
+                return QueryModel.Map(rest,
+                    QueryModel.Lambda($"arg{++_lambdaIndex}",
+                        QueryModel.Get(QueryModel.Var($"arg{_lambdaIndex}"))));
+            }
+            return QueryModel.Select(prop.Name.ToLowerUnderscored(), rest);
         }
 
         private object Visit(MemberInitExpression memberInit, string varName)
@@ -312,11 +282,10 @@ namespace FaunaDB.LINQ.Query
         private object Visit(MethodCallExpression methodCall, string varName)
         {
             var methodInfo = methodCall.Method;
-            if ((methodCall.Object == null || methodCall.Object is ConstantExpression)
-                && methodCall.Arguments.All(a => a is ConstantExpression || a is MemberExpression) 
-                && methodCall.Arguments.OfType<MemberExpression>().All(a => a.Expression is ConstantExpression))
+            if ((methodCall.Object == null || !IsDatabaseSide(methodCall.Object))
+                && !methodCall.Arguments.Any(IsDatabaseSide))
             {
-                var fixedParams = FixConstantParameters(methodCall.Arguments);
+                var fixedParams = FixLocalParameters(methodCall.Arguments);
                 var callTarget = (methodCall.Object as ConstantExpression)?.Value;
                 methodInfo.Invoke(callTarget, fixedParams);
             }
@@ -332,6 +301,21 @@ namespace FaunaDB.LINQ.Query
             return QueryModel.Call(functionRef, methodCall.Arguments.Select(a => Accept(a, varName)).ToArray());
         }
 
+        private static bool IsDatabaseSide(Expression expr)
+        {
+            switch (expr)
+            {
+                case MemberExpression member:
+                    return IsDatabaseSide(member.Expression);
+                case ParameterExpression _:
+                    return true;
+                default: 
+                    return false;
+            }
+        }
+
+        private static object GetLocalVariableValue(Expression expr) => Expression.Lambda<Func<object>>(Expression.Convert(expr, typeof(object))).Compile().Invoke();
+
         private object Visit(NewArrayExpression newArray, string varName)
         {
             return newArray.NodeType == ExpressionType.NewArrayInit ? newArray.Expressions.Select(a => Accept(a, varName)) : Activator.CreateInstance(newArray.Type.MakeArrayType(), (int)((ConstantExpression)newArray.Expressions[0]).Value);
@@ -339,12 +323,11 @@ namespace FaunaDB.LINQ.Query
 
         private object Visit(NewExpression newExpr)
         {
-            if (!newExpr.Arguments.All(a => a is ConstantExpression || a is MemberExpression) || !newExpr.Arguments
-                    .OfType<MemberExpression>().All(a => a.Expression is ConstantExpression))
+            if (newExpr.Arguments.Any(IsDatabaseSide))
                 throw new UnsupportedMethodException(newExpr.Constructor.DeclaringType + ".ctor",
-                    "Parameterised constructor with variable parameters not supported.");
+                    "Parameterised constructor with database side parameters not supported.");
 
-            var parameters = FixConstantParameters(newExpr.Arguments);
+            var parameters = FixLocalParameters(newExpr.Arguments);
             var obj = newExpr.Constructor.Invoke(parameters);
             return _context.ToFaunaObjOrPrimitive(obj);
         }
@@ -415,34 +398,6 @@ namespace FaunaDB.LINQ.Query
             }
         }
 
-        private static object[] FixConstantParameters(IEnumerable<Expression> args)
-        {
-            var fixedParams = new List<object>();
-            foreach (var argument in args)
-            {
-                switch (argument)
-                {
-                    case ConstantExpression constantArg:
-                        fixedParams.Add(constantArg.Value);
-                        break;
-                    case MemberExpression memberArg:
-                        var obj = ((ConstantExpression) memberArg.Expression).Value;
-                        switch (memberArg.Member)
-                        {
-                            case PropertyInfo propInfo:
-                                fixedParams.Add(propInfo.GetValue(obj));
-                                break;
-                            case FieldInfo fieldInfo:
-                                fixedParams.Add(fieldInfo.GetValue(obj));
-                                break;
-                            default:
-                                throw new ArgumentOutOfRangeException();
-                        }
-                        break;
-                }
-            }
-
-            return fixedParams.ToArray();
-        }
+        private static object[] FixLocalParameters(IEnumerable<Expression> args) => args.Select(GetLocalVariableValue).ToArray();
     }
 }
