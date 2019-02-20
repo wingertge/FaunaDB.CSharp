@@ -617,6 +617,27 @@ namespace FaunaDB.LINQ.Tests
             
             Assert.Equal(manual, automatic);
         }
+
+        [Fact]
+        public void LocalMethodCallTest()
+        {
+            IsolationUtils.FakeAttributeClient(LocalMethodCallTest_Run);
+            IsolationUtils.FakeManualClient(LocalMethodCallTest_Run);
+        }
+
+        private static void LocalMethodCallTest_Run(IDbContext client, ref Expr lastQuery)
+        {
+            var q = client.Query<ReferenceModel>(a => a.Indexed1 == "test1").Select(a => DummyMethodCall("test"));
+            
+            var selectorManual = Map(Match(Index("index_1"), Arr("test1")), Lambda("arg0", Get(Var("arg0"))));
+            var selectManual = Map(selectorManual, Lambda("arg1", "test"));
+            var manual = JsonConvert.SerializeObject(selectManual);
+                                                
+            q.Provider.Execute<object>(q.Expression);
+            var automatic = JsonConvert.SerializeObject(lastQuery);
+            
+            Assert.Equal(manual, automatic);
+        }
         
         [Fact]
         public void QueryFailureTest()
@@ -690,7 +711,7 @@ namespace FaunaDB.LINQ.Tests
             });
         }
 
-        private static string DummyMethodCall(string s) => "";
+        private static string DummyMethodCall(string s) => s;
 
         private static object[] Arr(params object[] values) => values;
 

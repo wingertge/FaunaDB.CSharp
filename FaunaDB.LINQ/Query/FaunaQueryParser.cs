@@ -289,9 +289,7 @@ namespace FaunaDB.LINQ.Query
             var methodInfo = methodCall.Method;
             if (!IsDatabaseSide(methodCall))
             {
-                var fixedParams = FixLocalParameters(methodCall.Arguments);
-                var callTarget = (methodCall.Object as ConstantExpression)?.Value;
-                var result = methodInfo.Invoke(callTarget, fixedParams);
+                var result = Expression.Lambda(methodCall).Compile().DynamicInvoke();
                 return _context.ToFaunaObjOrPrimitive(result);
             }
             if (!methodInfo.IsStatic)
@@ -391,7 +389,5 @@ namespace FaunaDB.LINQ.Query
                     throw new ArgumentOutOfRangeException();
             }
         }
-
-        private object[] FixLocalParameters(IEnumerable<Expression> args) => args.Select(GetLocalVariableValue).ToArray();
     }
 }
