@@ -145,6 +145,9 @@ namespace FaunaDB.LINQ.Tests
     {
         [Key]
         public string Id { get; set; }
+        
+        [Indexed("index_1")]
+        public string Indexed1 { get; set; }
 
         [Reference]
         public ReferenceModel ReferenceModel { get; set; }
@@ -186,6 +189,7 @@ namespace FaunaDB.LINQ.Tests
         public ReferenceTypesReferenceModelMapping()
         {
             this.HasKey(a => a.Id)
+                .HasIndex(a => a.Indexed1, "index_1")
                 .HasReference(a => a.ReferenceModel)
                 .HasReference(a => a.ReferenceModels1)
                 .HasReference(a => a.ReferenceModels2);

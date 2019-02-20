@@ -447,6 +447,28 @@ namespace FaunaDB.LINQ.Tests
             
             Assert.Equal(manual, automatic);
         }
+
+        [Fact]
+        public void SelectCollectionQueryTest()
+        {
+            IsolationUtils.FakeAttributeClient(SelectCollectionQueryTest_Run);
+            IsolationUtils.FakeManualClient(SelectCollectionQueryTest_Run);
+        }
+
+        private static void SelectCollectionQueryTest_Run(IDbContext client, ref Expr lastQuery)
+        {
+            var q = client.Query<ReferenceTypesReferenceModel>(a => a.Indexed1 == "test1").Select(a => a.ReferenceModels1);
+            
+            var selectorManual = Map(Match(Index("index_1"), Arr("test1")), Lambda("arg0", Get(Var("arg0"))));
+            var getManual = Map(Select(new object[]{"data", "reference_models1"}, Var("arg1")), Lambda("arg2", Get(Var("arg2"))));
+            var selectManual = Map(selectorManual, Lambda("arg1", getManual));
+            var manual = JsonConvert.SerializeObject(selectManual);
+
+            q.Provider.Execute<object>(q.Expression);
+            var automatic = JsonConvert.SerializeObject(lastQuery);
+            
+            Assert.Equal(manual, automatic);
+        }
         
         [Fact]
         public void QueryFailureTest()
@@ -496,6 +518,11 @@ namespace FaunaDB.LINQ.Tests
             Assert.Throws<UnsupportedMethodException>(() =>
             {
                 var q = client.Query<IncludeModel>(a => a.Indexed1 == "test1").Select(Expression.Lambda<Func<IncludeModel, double>>(Expression.Power(Expression.Constant(1.0), Expression.Constant(2.0)), Expression.Parameter(typeof(IncludeModel))));
+                q.Provider.Execute<object>(q.Expression);
+            });
+            Assert.Throws<ArgumentException>(() =>
+            {
+                var q = client.Query<IncludeModel>(a => a.Indexed1 == "test1").Select(a => a.Field);
                 q.Provider.Execute<object>(q.Expression);
             });
         }

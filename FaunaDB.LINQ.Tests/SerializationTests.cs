@@ -131,9 +131,13 @@ namespace FaunaDB.LINQ.Tests
                 ReferenceModels2 = new [] { new ReferenceModel { Id = "test7", Indexed2 = "test8"}, new ReferenceModel { Id = "test9", Indexed2 = "test10" } }
             };
 
-            var manual = Obj("reference_model", Ref("test1"), 
-                "reference_models1", new object[] {Ref("test3"), Ref("test5")},
-                "reference_models2", new object[] {Ref("test7"), Ref("test9")});
+            var manual = Obj(new Dictionary<string, object>
+            {
+                {"indexed1", null},
+                {"reference_model", Ref("test1")},
+                {"reference_models1", new object[] {Ref("test3"), Ref("test5")}},
+                {"reference_models2", new object[] {Ref("test7"), Ref("test9")}}
+            });
 
             Assert.Equal(JsonConvert.SerializeObject(manual), JsonConvert.SerializeObject(context.ToFaunaObj(model)));
         }
