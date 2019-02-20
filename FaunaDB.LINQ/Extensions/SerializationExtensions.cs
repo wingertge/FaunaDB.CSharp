@@ -70,7 +70,7 @@ namespace FaunaDB.LINQ.Extensions
 
         public static T Decode<T>(this IDbContext context, RequestResult request)
         {
-            return (T) Decode(context, JObject.Parse(request.ResponseContent), typeof(T));
+            return request == null ? default(T) : (T) Decode(context, JObject.Parse(request?.ResponseContent), typeof(T));
         }
 
         public static dynamic Decode(this IDbContext context, JToken value, Type type)

@@ -373,8 +373,6 @@ namespace FaunaDB.LINQ.Query
                 case ConditionalExpression conditional: return Visit(conditional, varName);
                 case ConstantExpression constant: return Visit(constant);
                 case DefaultExpression defaultExp: return Visit(defaultExp);
-                case GotoExpression _: throw new UnsupportedMethodException("Goto", "Seriously?");
-                case IndexExpression _: throw new UnsupportedMethodException("ArrayIndex", "List Indexing is currently unsupported.");
                 case ListInitExpression listInit: return Visit(listInit, varName);
                 case MemberExpression member: return Visit(member, varName);
                 case MemberInitExpression memberInit: return Visit(memberInit, varName);
@@ -382,11 +380,10 @@ namespace FaunaDB.LINQ.Query
                 case NewArrayExpression newArray: return Visit(newArray, varName);
                 case NewExpression newExpr: return Visit(newExpr);
                 case ParameterExpression p: return Visit(p, varName);
-                case SwitchExpression _: throw new UnsupportedMethodException("switch", "Switch expressions are not supported. Use if/else instead.");
                 case TypeBinaryExpression typeBinary: return Visit(typeBinary);
                 case UnaryExpression unary: return Visit(unary, varName);
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    throw new UnsupportedMethodException(expression.NodeType.ToString());
             }
         }
     }

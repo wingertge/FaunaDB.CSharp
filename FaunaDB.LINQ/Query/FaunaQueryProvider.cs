@@ -30,24 +30,15 @@ namespace FaunaDB.LINQ.Query
             }
         }
 
-        public IQueryable<TElement> CreateQuery<TElement>(Expression expression)
-        {
-            return new FaunaQueryableData<TElement>(this, expression);
-        }
+        public IQueryable<TElement> CreateQuery<TElement>(Expression expression) => new FaunaQueryableData<TElement>(this, expression);
 
-        public object Execute(Expression expression)
-        {
-            throw new InvalidOperationException("Can't execute non generic Fauna query.");
-        }
+        public object Execute(Expression expression) => throw new InvalidOperationException("Can't execute non generic Fauna query.");
 
         public TResult Execute<TResult>(Expression expression)
         {
             return _context.Query<TResult>(FaunaQueryParser.Parse(_selector, expression, _context)).Result;
         }
 
-        public Task<TResult> ExecuteAsync<TResult>(Expression expression)
-        {
-            return _context.Query<TResult>(FaunaQueryParser.Parse(_selector, expression, _context));
-        }
+        public Task<TResult> ExecuteAsync<TResult>(Expression expression) => _context.Query<TResult>(FaunaQueryParser.Parse(_selector, expression, _context));
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Reflection.Emit;
 using FaunaDB.Driver;
 using FaunaDB.Driver.Errors;
 using FaunaDB.LINQ.Extensions;
@@ -709,7 +710,18 @@ namespace FaunaDB.LINQ.Tests
                 var q = client.Query<IncludeModel>(a => a.Indexed1 == "test1").Select(a => a is string);
                 q.Provider.Execute<object>(q.Expression);
             });
+            Assert.Throws<UnsupportedMethodException>(() =>
+            {
+                var q = client.Query<IncludeModel>(a => a.Indexed1 == "test1").Select(
+                    Expression.Lambda<Func<IncludeModel, string>>(
+                        Expression.Switch(typeof(string), Expression.Constant(1), Expression.Constant("test"),
+                            typeof(QueryTests).GetMethod(nameof(Compare))),
+                        Expression.Parameter(typeof(IncludeModel))));
+                q.Provider.Execute<object>(q.Expression);
+            });
         }
+
+        private static bool Compare(int i1, int i2) => i1 == i2;
 
         private static string DummyMethodCall(string s) => s;
 
