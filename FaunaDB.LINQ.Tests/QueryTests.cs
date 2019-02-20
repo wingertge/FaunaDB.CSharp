@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -134,7 +135,7 @@ namespace FaunaDB.LINQ.Tests
             string s = null;
             var q = client.Query<ReferenceModel>(a => a.Indexed1 == "test1").Where(a =>
                 (a.Indexed1 == "test1" && a.Indexed2 != "test2") ||
-                (i2 > i1 && i1 < i2 && i1 <= i2 && i2 >= i1 && i2 + i1 > 0 && i1 - i2 > 0 && i2 % i1 == 0 && i1 / i2 == 1 && i1 * i2 == 2 && (s ?? "") == ""));
+                i2 > i1 && i1 < i2 && i1 <= i2 && i2 >= i1 && i2 + i1 > 0 && i1 - i2 > 0 && i2 % i1 == 0 && i1 / i2 == 1 && i1 * i2 == 2 && (s ?? "") == "" && -i1 < 0 && !(i1 < i2) && (float)i1 < i2);
 
             var manual = Filter(Map(Match(Index("index_1"), new object[] {"test1"}), Lambda("arg0", Get(Var("arg0")))),
                 Lambda("arg1", Or(
@@ -153,24 +154,33 @@ namespace FaunaDB.LINQ.Tests
                                             And(
                                                 And(
                                                     And(
-                                                        GT(2, 1),
-                                                        LT(1, 2)
+                                                        And(
+                                                            And(
+                                                                And(
+                                                                    GT(2, 1),
+                                                                    LT(1, 2)
+                                                                ),
+                                                                LTE(1, 2)
+                                                            ),
+                                                            GTE(2, 1)
+                                                        ),
+                                                        GT(Add(2, 1), 0)
                                                     ),
-                                                    LTE(1, 2)
+                                                    GT(Subtract(1, 2), 0)
                                                 ),
-                                                GTE(2, 1)
+                                                EqualsFn(Modulo(2, 1), 0)
                                             ),
-                                            GT(Add(2, 1), 0)
+                                            EqualsFn(Divide(1, 2), 1)
                                         ),
-                                        GT(Subtract(1, 2), 0)
+                                        EqualsFn(Multiply(1, 2), 2)
                                     ),
-                                    EqualsFn(Modulo(2, 1), 0)
+                                    EqualsFn(If(EqualsFn(null, null), "", null), "")
                                 ),
-                                EqualsFn(Divide(1, 2), 1)
+                                LT(Subtract(0, 1), 0)
                             ),
-                            EqualsFn(Multiply(1, 2), 2)
+                            Not(LT(1, 2))
                         ),
-                        EqualsFn(If(EqualsFn(null, null), "", null), "")
+                        LT(1, 2)
                     )
                 )));
 
@@ -369,10 +379,10 @@ namespace FaunaDB.LINQ.Tests
         private static void TupleBuiltInMethodTest_Run(IDbContext client, ref Expr lastQuery)
         {
             var q = client.Query<ReferenceModel>(a => a.Indexed1 == "test1")
-                .Where(a => a.CompositeIndex == Tuple.Create("a", "b"));
+                .Where(a => a.CompositeIndex == Tuple.Create("a", a.Indexed1));
             
             var selectorManual = Map(Match(Index("index_1"), Arr("test1")), Lambda("arg0", Get(Var("arg0"))));
-            var whereManual = Filter(selectorManual, Lambda("arg1", EqualsFn(Select(new object[]{"data", "composite_index"}, Var("arg1")), new object[]{"a", "b"})));
+            var whereManual = Filter(selectorManual, Lambda("arg1", EqualsFn(Select(new object[]{"data", "composite_index"}, Var("arg1")), new object[]{"a", Select(new object[]{"data", "indexed1"}, Var("arg1"))})));
             var manual = JsonConvert.SerializeObject(whereManual);
 
             q.Provider.Execute<object>(q.Expression);
@@ -513,6 +523,58 @@ namespace FaunaDB.LINQ.Tests
             
             Assert.Equal(manual, automatic);
         }
+
+        [Fact]
+        public void DefaultValueQueryTest()
+        {
+            IsolationUtils.FakeAttributeClient(DefaultValueQueryTest_Run);
+            IsolationUtils.FakeManualClient(DefaultValueQueryTest_Run);
+        }
+
+        private static void DefaultValueQueryTest_Run(IDbContext client, ref Expr lastQuery)
+        {
+            //have to construct artificially due to compiler optimization
+            var q = client.Query<ValueTypesReferenceModel>(a => a.Indexed1 == "test1").Select(Expression.Lambda<Func<ValueTypesReferenceModel, int>>(Expression.Default(typeof(int)), Expression.Parameter(typeof(ValueTypesReferenceModel))));
+            
+            var selectorManual = Map(Match(Index("index_1"), Arr("test1")), Lambda("arg0", Get(Var("arg0"))));
+            var selectManual = Map(selectorManual, Lambda("arg1", 0));
+            var manual = JsonConvert.SerializeObject(selectManual);
+            
+            q.Provider.Execute<object>(q.Expression);
+            var automatic = JsonConvert.SerializeObject(lastQuery);
+            
+            Assert.Equal(manual, automatic);
+        }
+
+        [Fact]
+        public void ListInitQueryTest()
+        {
+            IsolationUtils.FakeAttributeClient(ListInitQueryTest_Run);
+            IsolationUtils.FakeManualClient(ListInitQueryTest_Run);
+        }
+        
+        private static void ListInitQueryTest_Run(IDbContext client, ref Expr lastQuery)
+        {
+            var q = client.Query<ValueTypesReferenceModel>(a => a.Indexed1 == "test1").Select(a =>
+                new Dictionary<string, object>
+                {
+                    {"test", null}, {"test2", null}, {"test3", a}
+                });
+            
+            var selectorManual = Map(Match(Index("index_1"), Arr("test1")), Lambda("arg0", Get(Var("arg0"))));
+            var selectManual = Map(selectorManual, Lambda("arg1", new Dictionary<string, object>
+            {
+                {"test", null},
+                {"test2", null},
+                {"test3", Var("arg1")}
+            }));
+            var manual = JsonConvert.SerializeObject(selectManual);
+            
+            q.Provider.Execute<object>(q.Expression);
+            var automatic = JsonConvert.SerializeObject(lastQuery);
+            
+            Assert.Equal(manual, automatic);
+        }
         
         [Fact]
         public void QueryFailureTest()
@@ -526,7 +588,7 @@ namespace FaunaDB.LINQ.Tests
             var i = "";
 
             Assert.Throws<ArgumentException>(() => client.Query<ReferenceModel>(a => a.Indexed1 != i));
-            Assert.Throws<ArgumentException>(() => client.Query<ReferenceModel>(a => a.Id != DummyMethodCall()));
+            Assert.Throws<ArgumentException>(() => client.Query<ReferenceModel>(a => a.Id != DummyMethodCall("")));
             Assert.Throws<ArgumentException>(() => client.Query<ReferenceModel>(a => a.Id != ""));
             Assert.Throws<UnsupportedMethodException>(() => client.Query<ReferenceModel>(a => a.Indexed1 != "" ^ a.Indexed2 == ""));
             Assert.Throws<UnsupportedMethodException>(() =>
@@ -551,7 +613,7 @@ namespace FaunaDB.LINQ.Tests
             });
             Assert.Throws<UnsupportedMethodException>(() =>
             {
-                var q = client.Query<IncludeModel>(a => a.Indexed1 == "test1").Select(a => DummyMethodCall());
+                var q = client.Query<IncludeModel>(a => a.Indexed1 == "test1").Select(a => DummyMethodCall(a.Id));
                 q.Provider.Execute<object>(q.Expression);
             });
             Assert.Throws<UnsupportedMethodException>(() =>
@@ -569,9 +631,19 @@ namespace FaunaDB.LINQ.Tests
                 var q = client.Query<IncludeModel>(a => a.Indexed1 == "test1").Select(a => a.Field);
                 q.Provider.Execute<object>(q.Expression);
             });
+            Assert.Throws<UnsupportedMethodException>(() =>
+            {
+                var q = client.Query<IncludeModel>(a => a.Indexed1 == "test1").Select(a => 1 as float?);
+                q.Provider.Execute<object>(q.Expression);
+            });
+            Assert.Throws<UnsupportedMethodException>(() =>
+            {
+                var q = client.Query<IncludeModel>(a => a.Indexed1 == "test1").Select(a => new ConstructorTestModel(a.Indexed1));
+                q.Provider.Execute<object>(q.Expression);
+            });
         }
 
-        private static string DummyMethodCall() => "";
+        private static string DummyMethodCall(string s) => "";
 
         private static object[] Arr(params object[] values) => values;
 

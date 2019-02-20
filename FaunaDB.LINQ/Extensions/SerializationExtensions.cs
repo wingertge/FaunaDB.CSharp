@@ -37,6 +37,8 @@ namespace FaunaDB.LINQ.Extensions
 
                 if (propType.GetTypeInfo().IsPrimitive || propType == typeof(string))
                     fields[propName] = propValue;
+                else if (IsTuple(propType))
+                    fields[propName] = propType.GetProperties().Select(a => a.GetValue(obj)).ToArray();
                 else if (propType == typeof(DateTime))
                     fields[propName] = QueryModel.Time(((DateTime)propValue).ToString("O"));
                 else
@@ -162,11 +164,38 @@ namespace FaunaDB.LINQ.Extensions
         {
             if (obj == null) return null;
             var type = obj.GetType();
-            if (type.GetTypeInfo().IsPrimitive || type == typeof(string))
+            if (typeof(IEnumerable).IsAssignableFrom(type))
+                type = type.GetInterface(typeof(IEnumerable<>).Name).GetGenericArguments().Single();
+            if (type.GetTypeInfo().IsPrimitive || type == typeof(string) || type == typeof(object))
                 return obj;
+            if (IsTuple(type))
+                return type.GetProperties().Select(a => a.GetValue(obj)).ToArray();
             return type == typeof(DateTime) 
                 ? QueryModel.Time(((DateTime)obj).ToString("O")) 
                 : context.ToFaunaObj(obj);
+        }
+
+        private static bool IsTuple(Type type)
+        {
+            if (type == null)
+                throw new ArgumentNullException(nameof(type));
+
+                if (type.IsGenericType)
+                {
+                    var genType = type.GetGenericTypeDefinition();
+                    if (genType == typeof(Tuple<>)
+                        || genType == typeof(Tuple<,>)
+                        || genType == typeof(Tuple<,,>)
+                        || genType == typeof(Tuple<,,,>)
+                        || genType == typeof(Tuple<,,,,>)
+                        || genType == typeof(Tuple<,,,,,>)
+                        || genType == typeof(Tuple<,,,,,,>)
+                        || genType == typeof(Tuple<,,,,,,,>)
+                        || genType == typeof(Tuple<,,,,,,,>))
+                        return true;
+                }
+
+            return false;
         }
     }
 }

@@ -4,10 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Threading.Tasks;
 using FaunaDB.Driver;
 using FaunaDB.Driver.Errors;
-using FaunaDB.LINQ.Errors;
 using FaunaDB.LINQ.Extensions;
 using FaunaDB.LINQ.Modeling;
 using FaunaDB.LINQ.Types;
@@ -19,8 +17,8 @@ namespace FaunaDB.LINQ.Query
     {
         private int _lambdaIndex;
         private IDbContext _context;
-        private const string CurrentlyUnsupportedError = "Currently unsupported by FaunaDB.";
-        private const string UnsupportedError = "Unsupported by FaunaDB (likely won't change).";
+        private const string CurrentlyUnsupportedError = "Currently unsupported.";
+        private const string UnsupportedError = "Unsupported (likely won't change).";
 
         private static readonly Dictionary<(Type, string), Func<object, object, object>> BuiltInBinaryMethods = new Dictionary<(Type, string), Func<object, object, object>>
         {
@@ -216,14 +214,13 @@ namespace FaunaDB.LINQ.Query
 
         private object Visit(ListInitExpression listInit, string varName)
         {
-            var result = new List<object>();
+            var result = Expression.Lambda(listInit.NewExpression).Compile().DynamicInvoke();
             foreach (var initializer in listInit.Initializers)
             {
                 var args = initializer.Arguments;
-                if(args.Count == 1) result.Add(Accept(args[0], varName));
-                else throw new UnsupportedMethodException("Tuple collection initializer not supported.");
+                initializer.AddMethod.Invoke(result, args.Select(a => Accept(a, varName)).ToArray());
             }
-            return result.ToArray();
+            return result;
         }
 
         private object Visit(MemberExpression member, string varName)
@@ -288,12 +285,12 @@ namespace FaunaDB.LINQ.Query
         private object Visit(MethodCallExpression methodCall, string varName)
         {
             var methodInfo = methodCall.Method;
-            if ((methodCall.Object == null || !IsDatabaseSide(methodCall.Object))
-                && !methodCall.Arguments.Any(IsDatabaseSide))
+            if (!IsDatabaseSide(methodCall))
             {
                 var fixedParams = FixLocalParameters(methodCall.Arguments);
                 var callTarget = (methodCall.Object as ConstantExpression)?.Value;
-                methodInfo.Invoke(callTarget, fixedParams);
+                var result = methodInfo.Invoke(callTarget, fixedParams);
+                return _context.ToFaunaObjOrPrimitive(result);
             }
             if (!methodInfo.IsStatic)
                 throw new UnsupportedMethodException("Can't call member method in FaunaDB query.");
@@ -309,34 +306,33 @@ namespace FaunaDB.LINQ.Query
 
         private static bool IsDatabaseSide(Expression expr)
         {
-            switch (expr)
+            while (true)
             {
-                case MemberExpression member:
-                    return IsDatabaseSide(member.Expression);
-                case ParameterExpression _:
-                    return true;
-                default: 
-                    return false;
+                switch (expr)
+                {
+                    case MemberExpression member:
+                        expr = member.Expression;
+                        continue;
+                    case ParameterExpression _:
+                        return true;
+                    case NewExpression newExpression:
+                        return newExpression.Arguments.Any(IsDatabaseSide);
+                    case MethodCallExpression method:
+                        return method.Arguments.Any(IsDatabaseSide) || IsDatabaseSide(method.Object);
+                    default:
+                        return false;
+                }
             }
         }
 
-        private static object GetLocalVariableValue(Expression expr) => Expression.Lambda<Func<object>>(Expression.Convert(expr, typeof(object))).Compile().Invoke();
+        private object GetLocalVariableValue(Expression expr) => _context.ToFaunaObjOrPrimitive(Expression.Lambda<Func<object>>(Expression.Convert(expr, typeof(object))).Compile().Invoke());
 
         private object Visit(NewArrayExpression newArray, string varName)
         {
             return newArray.NodeType == ExpressionType.NewArrayInit ? newArray.Expressions.Select(a => Accept(a, varName)) : Activator.CreateInstance(newArray.Type.MakeArrayType(), (int)((ConstantExpression)newArray.Expressions[0]).Value);
         }
 
-        private object Visit(NewExpression newExpr)
-        {
-            if (newExpr.Arguments.Any(IsDatabaseSide))
-                throw new UnsupportedMethodException(newExpr.Constructor.DeclaringType + ".ctor",
-                    "Parameterised constructor with database side parameters not supported.");
-
-            var parameters = FixLocalParameters(newExpr.Arguments);
-            var obj = newExpr.Constructor.Invoke(parameters);
-            return _context.ToFaunaObjOrPrimitive(obj);
-        }
+        private object Visit(NewExpression newExpr) => throw new UnsupportedMethodException("Can't call constructor with database side parameters");
         
         private static object Visit(ParameterExpression p, string varName) => Var(varName);
 
@@ -373,9 +369,9 @@ namespace FaunaDB.LINQ.Query
                     return Accept(unary.Operand, varName);
                 case ExpressionType.Negate:
                 case ExpressionType.NegateChecked:
-                    throw new UnsupportedMethodException(unary.NodeType.ToString(), CurrentlyUnsupportedError);
+                    return Subtract(0, Accept(unary.Operand, varName));
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    throw new UnsupportedMethodException($"Unsupported operation: {unary.NodeType}");
             }
         }
         
@@ -404,6 +400,6 @@ namespace FaunaDB.LINQ.Query
             }
         }
 
-        private static object[] FixLocalParameters(IEnumerable<Expression> args) => args.Select(GetLocalVariableValue).ToArray();
+        private object[] FixLocalParameters(IEnumerable<Expression> args) => args.Select(GetLocalVariableValue).ToArray();
     }
 }
