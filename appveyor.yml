@@ -1,0 +1,41 @@
+version: 1.0.{build}
+image: Visual Studio 2017
+
+configuration: Release
+init:
+  - ps: '[System.IO.File]::AppendAllText("C:\Windows\System32\drivers\etc\hosts", "`n93.184.221.200  api.nuget.org")'
+
+before_build:
+  - ps: >-
+      nuget restore
+      $configFiles = Get-ChildItem . *.csproj -rec
+      $versionString = "<PackageVersion>" + $env:APPVEYOR_BUILD_VERSION + "</PackageVersion>"
+      foreach ($file in $configFiles)
+      {
+          (Get-Content $file.PSPath) |
+          Foreach-Object { $_ -replace "<PackageVersion>1.0.0</PackageVersion>", $versionString  } |
+          Set-Content $file.PSPath
+      }
+
+install:
+  - cmd: >-
+      type c:\windows\system32\drivers\etc\hosts
+      dotnet restore
+nuget:
+  account_feed: false
+build:
+  verbosity: minimal
+  publish_nuget: true
+  publish_nuget_symbols: true
+
+artifacts:
+  - path: /.\MemoryCore\bin\**\*.xml
+    name: XML Docs
+
+
+deploy:
+  - provider: NuGet
+    api_key:
+      secure: +1KK3+R5PcR/MlDWQeln3RPRG4JH+n1bL34KuJ4AUxE=
+    symbol_server: https://ci.appveyor.com/nuget/wingertge-9678l6k3j3o3/api/v2/package
+    artifact: /.*\.symbols\.nupkg/
