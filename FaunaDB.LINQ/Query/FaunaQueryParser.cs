@@ -214,6 +214,8 @@ namespace FaunaDB.LINQ.Query
 
         private object Visit(ListInitExpression listInit, string varName)
         {
+            if (!IsDatabaseSide(listInit))
+                return _context.ToFaunaObjOrPrimitive(Expression.Lambda(listInit).Compile().DynamicInvoke());
             var result = Expression.Lambda(listInit.NewExpression).Compile().DynamicInvoke();
             foreach (var initializer in listInit.Initializers)
             {

@@ -596,6 +596,27 @@ namespace FaunaDB.LINQ.Tests
             
             Assert.Equal(manual, automatic);
         }
+
+        [Fact]
+        public void LocalListInitTest()
+        {
+            IsolationUtils.FakeAttributeClient(LocalListInitTest_Run);
+            IsolationUtils.FakeManualClient(LocalListInitTest_Run);
+        }
+
+        private static void LocalListInitTest_Run(IDbContext client, ref Expr lastQuery)
+        {
+            var q = client.Query<ReferenceModel>(a => a.Indexed1 == "test1").Select(a => new List<string> {"test1", "test2"});
+            
+            var selectorManual = Map(Match(Index("index_1"), Arr("test1")), Lambda("arg0", Get(Var("arg0"))));
+            var selectManual = Map(selectorManual, Lambda("arg1", new object[] {"test1", "test2"}));
+            var manual = JsonConvert.SerializeObject(selectManual);
+                                    
+            q.Provider.Execute<object>(q.Expression);
+            var automatic = JsonConvert.SerializeObject(lastQuery);
+            
+            Assert.Equal(manual, automatic);
+        }
         
         [Fact]
         public void QueryFailureTest()
