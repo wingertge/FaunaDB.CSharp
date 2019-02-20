@@ -108,9 +108,14 @@ namespace FaunaDB.LINQ.Tests
                 ValueModels2 = new[] { new ValueModel { Value1 = "test7", Value2 = "test8" }, new ValueModel { Value1 = "test9", Value2 = "test10" } }
             };
 
-            var manual = Obj("value_model", Obj("value1", "test1", "value2", "test2"), "value_models1",
-                new object[]{Obj("value1", "test3", "value2", "test4"), Obj("value1", "test5", "value2", "test6")},
-                "value_models2", new object[]{Obj("value1", "test7", "value2", "test8"), Obj("value1", "test9", "value2", "test10")});
+            var dict = new Dictionary<string, object>
+            {
+                {"indexed1", null},
+                {"value_model", Obj("value1", "test1", "value2", "test2")},
+                {"value_models1", new object[]{Obj("value1", "test3", "value2", "test4"), Obj("value1", "test5", "value2", "test6")}},
+                {"value_models2", new object[]{Obj("value1", "test7", "value2", "test8"), Obj("value1", "test9", "value2", "test10")}}
+            };
+            var manual = Obj(dict);
 
             Assert.Equal(JsonConvert.SerializeObject(manual), JsonConvert.SerializeObject(context.ToFaunaObj(model)));         
         }

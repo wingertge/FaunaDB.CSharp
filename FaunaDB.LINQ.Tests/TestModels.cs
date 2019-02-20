@@ -127,6 +127,9 @@ namespace FaunaDB.LINQ.Tests
     {
         [Key]
         public string Id { get; set; }
+        
+        [Indexed("index_1")]
+        public string Indexed1 { get; set; }
 
         public ValueModel ValueModel { get; set; }
         public List<ValueModel> ValueModels1 { get; set; }
@@ -137,7 +140,8 @@ namespace FaunaDB.LINQ.Tests
     {
         public ValueTypesReferenceModelMapping()
         {
-            HasKey(a => a.Id);
+            HasKey(a => a.Id)
+                .HasIndex(a => a.Indexed1, "index_1");
         }
     }
 

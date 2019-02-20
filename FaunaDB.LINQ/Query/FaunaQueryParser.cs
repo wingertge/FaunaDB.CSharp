@@ -231,21 +231,34 @@ namespace FaunaDB.LINQ.Query
             if (!IsDatabaseSide(member))
                 return _context.ToFaunaObjOrPrimitive(GetLocalVariableValue(member));
             var memberInfo = member.Member;
-            if(!(memberInfo is PropertyInfo prop))
+            if (!(memberInfo is PropertyInfo prop))
                 throw new ArgumentException("Can't use fields as selector.");
             var rest = Accept(member.Expression, varName);
-            if (_context.Mappings.ContainsKey(member.Member.DeclaringType ?? typeof(object)))
+            var mapping = _context.Mappings[member.Member.DeclaringType][prop];
+            if (!IsParentReference(member))
+                return Select(mapping.Name, rest);
+            if (mapping.Type != DbPropertyType.Reference)
+                return Select(mapping.GetFaunaFieldPath(), rest);
+            if (typeof(IEnumerable).IsAssignableFrom(prop.PropertyType))
             {
-                var mapping = _context.Mappings[member.Member.DeclaringType][prop];
-                if (mapping.Type != DbPropertyType.Reference)
-                    return Select(mapping.GetFaunaFieldPath(), rest);
-                if (typeof(IEnumerable).IsAssignableFrom(prop.PropertyType))
-                {
-                    return Map(Select(mapping.GetFaunaFieldPath(), rest), Lambda($"arg{++_lambdaIndex}", Get(Var($"arg{_lambdaIndex}"))));
-                }
-                return Get(rest);
+                return Map(Select(mapping.GetFaunaFieldPath(), rest),
+                    Lambda($"arg{++_lambdaIndex}", Get(Var($"arg{_lambdaIndex}"))));
             }
-            return Select(prop.Name.ToLowerUnderscored(), rest);
+
+            return Get(Select(mapping.GetFaunaFieldPath(), rest));
+        }
+
+        private bool IsParentReference(MemberExpression member)
+        {
+            if (member.Expression is ParameterExpression)
+                return true;
+            var parent = member.Expression as MemberExpression;
+            var parentPropInfo = parent.Member as PropertyInfo ??
+                                 throw new ArgumentException("Can't use fields as selectors");
+            if (!_context.Mappings.ContainsKey(parent.Member.DeclaringType ?? typeof(object)))
+                return false;
+
+            return _context.Mappings[parent.Member.DeclaringType][parentPropInfo].Type == DbPropertyType.Reference;
         }
 
         private object Visit(MemberInitExpression memberInit, string varName)

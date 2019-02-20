@@ -194,15 +194,15 @@ namespace FaunaDB.LINQ.Tests
             var q2 = client.Query<ReferenceModel>(a => "test1" == a.Indexed1).Select(a => a.Indexed1 + "concat");
 
             var manual = Map(Map(Match(Index("index_1"), Arr("test1")), Lambda("arg0", Get(Var("arg0")))),
-                Lambda("arg1", Concat(new object[]{Select(Arr("data", "indexed1"), Var("arg1")), "concat"})));
+                Lambda("arg1", Concat(Select(Arr("data", "indexed1"), Var("arg1")), "concat")));
 
             q1.Provider.Execute<object>(q1.Expression);
 
-            Assert.Equal(JsonConvert.SerializeObject(lastQuery), JsonConvert.SerializeObject(manual));
+            Assert.Equal(JsonConvert.SerializeObject(manual), JsonConvert.SerializeObject(lastQuery));
 
             q2.Provider.Execute<object>(q2.Expression);
             
-            Assert.Equal(JsonConvert.SerializeObject(lastQuery), JsonConvert.SerializeObject(manual));
+            Assert.Equal(JsonConvert.SerializeObject(manual), JsonConvert.SerializeObject(lastQuery));
         }
 
         [Fact]
@@ -464,6 +464,50 @@ namespace FaunaDB.LINQ.Tests
             var selectManual = Map(selectorManual, Lambda("arg1", getManual));
             var manual = JsonConvert.SerializeObject(selectManual);
 
+            q.Provider.Execute<object>(q.Expression);
+            var automatic = JsonConvert.SerializeObject(lastQuery);
+            
+            Assert.Equal(manual, automatic);
+        }
+
+        [Fact]
+        public void SelectReferenceQueryTest()
+        {
+            IsolationUtils.FakeAttributeClient(SelectReferenceQueryTest_Run);
+            IsolationUtils.FakeManualClient(SelectReferenceQueryTest_Run);
+        }
+        
+        private static void SelectReferenceQueryTest_Run(IDbContext client, ref Expr lastQuery)
+        {
+            var q = client.Query<ReferenceTypesReferenceModel>(a => a.Indexed1 == "test1").Select(a => a.ReferenceModel);
+            
+            var selectorManual = Map(Match(Index("index_1"), Arr("test1")), Lambda("arg0", Get(Var("arg0"))));
+            var selectManual = Map(selectorManual,
+                Lambda("arg1", Get(Select(new object[] {"data", "reference_model"}, Var("arg1")))));
+            var manual = JsonConvert.SerializeObject(selectManual);
+            
+            q.Provider.Execute<object>(q.Expression);
+            var automatic = JsonConvert.SerializeObject(lastQuery);
+            
+            Assert.Equal(manual, automatic);
+        }
+
+        [Fact]
+        public void SelectValueTypePropertyTest()
+        {
+            IsolationUtils.FakeAttributeClient(SelectValueTypePropertyTest_Run);
+            IsolationUtils.FakeManualClient(SelectValueTypePropertyTest_Run);
+        }
+
+        private static void SelectValueTypePropertyTest_Run(IDbContext client, ref Expr lastQuery)
+        {
+            var q = client.Query<ValueTypesReferenceModel>(a => a.Indexed1 == "test1").Select(a => a.ValueModel.Value1);
+
+            var selectorManual = Map(Match(Index("index_1"), Arr("test1")), Lambda("arg0", Get(Var("arg0"))));
+            var innerSelectManual = Select(new object[] {"data", "value_model"}, Var("arg1"));
+            var selectManual = Map(selectorManual, Lambda("arg1", Select("value1", innerSelectManual)));
+            var manual = JsonConvert.SerializeObject(selectManual);
+            
             q.Provider.Execute<object>(q.Expression);
             var automatic = JsonConvert.SerializeObject(lastQuery);
             
