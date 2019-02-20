@@ -319,6 +319,10 @@ namespace FaunaDB.LINQ.Query
                         return newExpression.Arguments.Any(IsDatabaseSide);
                     case MethodCallExpression method:
                         return method.Arguments.Any(IsDatabaseSide) || IsDatabaseSide(method.Object);
+                    case NewArrayExpression arr:
+                        return arr.NodeType == ExpressionType.NewArrayInit && arr.Expressions.Any(IsDatabaseSide);
+                    case ListInitExpression listInit:
+                        return listInit.Initializers.Any(a => a.Arguments.Any(IsDatabaseSide));
                     default:
                         return false;
                 }

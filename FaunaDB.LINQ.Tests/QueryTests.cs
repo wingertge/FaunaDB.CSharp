@@ -423,10 +423,10 @@ namespace FaunaDB.LINQ.Tests
         
         private static void ArrayInitQueryTest_Run(IDbContext client, ref Expr lastQuery)
         {
-            var q = client.Query<ReferenceModel>(a => a.Indexed1 == "test1").Select(a => Tuple.Create(new object[1], new object[]{"test1", "test2"}));
+            var q = client.Query<ReferenceModel>(a => a.Indexed1 == "test1").Select(a => Tuple.Create(new object[1], new object[]{"test1", a.Indexed1}));
             
             var selectorManual = Map(Match(Index("index_1"), Arr("test1")), Lambda("arg0", Get(Var("arg0"))));
-            var selectManual = Map(selectorManual, Lambda("arg1", new object[] {new object[]{null}, new object[]{"test1", "test2"}}));
+            var selectManual = Map(selectorManual, Lambda("arg1", new object[] {new object[]{null}, new object[]{"test1", Select(new object[]{"data", "indexed1"}, Var("arg1"))}}));
             var manual = JsonConvert.SerializeObject(selectManual);
             
             q.Provider.Execute<object>(q.Expression);
