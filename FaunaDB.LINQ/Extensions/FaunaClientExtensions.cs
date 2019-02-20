@@ -21,6 +21,14 @@ namespace FaunaDB.LINQ.Extensions
                 : new[] { context.ToFaunaObjOrPrimitive(obj) };
         }
 
+        /// <summary>
+        /// Starts a FaunDB LINQ Query
+        /// </summary>
+        /// <param name="context">The database context instance</param>
+        /// <param name="selector">The Index selector lambda. Must be a comparison or chain of comparisons with an indexed property.</param>
+        /// <typeparam name="T">The type of the model to be queried</typeparam>
+        /// <returns>FaunaDB LINQ Query object</returns>
+        /// <exception cref="ArgumentException">Thrown if the selector lambda is invalid</exception>
         public static IQueryable<T> Query<T>(this IDbContext context, Expression<Func<T, bool>> selector)
         {
             if (!(selector.Body is BinaryExpression binary)) throw new ArgumentException("Index selector must be binary expression.");
@@ -81,6 +89,15 @@ namespace FaunaDB.LINQ.Extensions
             throw new ArgumentException("Invalid format for selector. Has to be tree of index selector operations.");
         }
 
+        /// <summary>
+        /// Starts a FaunDB LINQ Query
+        /// </summary>
+        /// <param name="context">The database context instance</param>
+        /// <param name="index">A selector lambda pointing to the index or composite index</param>
+        /// <param name="args">The value array for the index matching</param>
+        /// <typeparam name="T">The type of the model to be queried</typeparam>
+        /// <returns>FaunaDB LINQ Query object</returns>
+        /// <exception cref="ArgumentException">Thrown if the property selected isn't index</exception>
         public static IQueryable<T> Query<T>(this IDbContext context, Expression<Func<T, object>> index, params object[] args)
         {
             if(!(index.Body is MemberExpression member)) throw new ArgumentException("Index selector must be a member.");
@@ -94,21 +111,50 @@ namespace FaunaDB.LINQ.Extensions
             return context.Query<T>(indexName, args);
         }
 
+        /// <summary>
+        /// Starts a FaunDB LINQ Query
+        /// </summary>
+        /// <param name="context">The database context instance</param>
+        /// <param name="index">The name of the database index</param>
+        /// <param name="args">The value array for the index matching</param>
+        /// <typeparam name="T">The type of the model to be queried</typeparam>
+        /// <returns>FaunaDB LINQ Query object</returns>
         public static IQueryable<T> Query<T>(this IDbContext context, string index, params object[] args)
         {
             return new FaunaQueryableData<T>(context, QueryModel.Map(QueryModel.Match(QueryModel.Index(index), args), QueryModel.Lambda("arg0", QueryModel.Get(QueryModel.Var("arg0")))));
         }
 
+        /// <summary>
+        /// Starts a FaunDB LINQ Query
+        /// </summary>
+        /// <param name="context">The database context instance</param>
+        /// <param name="ref">The ref value to select from the database</param>
+        /// <typeparam name="T">The type of the model to be queried</typeparam>
+        /// <returns>FaunaDB LINQ Query object</returns>
         public static IQueryable<T> Query<T>(this IDbContext context, string @ref)
         {
             return new FaunaQueryableData<T>(context, QueryModel.Get(QueryModel.Ref(@ref)));
         }
 
+        /// <summary>
+        /// Creates a new database object
+        /// </summary>
+        /// <param name="context">The database context instance</param>
+        /// <param name="obj">The object to be inserted into the datbase</param>
+        /// <typeparam name="T">The type of the model to be inserted</typeparam>
+        /// <returns>Reference to created database object, including generated ref</returns>
         public static Task<T> Create<T>(this IDbContext context, T obj)
         {
             return context.Query<T>(QueryModel.Create(obj.GetClassRef(), QueryModel.Obj("data", context.ToFaunaObj(obj))));
         }
 
+        /// <summary>
+        /// Updates a database object
+        /// </summary>
+        /// <param name="context">The database context instance</param>
+        /// <param name="obj">The object to be updated</param>
+        /// <typeparam name="T">Type type of the model to be updated</typeparam>
+        /// <returns>Reference to updated database object</returns>
         public static Task<T> Update<T>(this IDbContext context, T obj)
         {
             var mapping = context.Mappings[typeof(T)];
@@ -116,11 +162,26 @@ namespace FaunaDB.LINQ.Extensions
             return context.Update(obj, id.Key.GetValue(obj).ToString());
         }
 
+        /// <summary>
+        /// Updates a database object
+        /// </summary>
+        /// <param name="context">The database context instance</param>
+        /// <param name="obj">The object to be updated</param>
+        /// <param name="id">The ref to update</param>
+        /// <typeparam name="T">Type type of the model to be updated</typeparam>
+        /// <returns>Reference to updated database object</returns>
         public static Task<T> Update<T>(this IDbContext context, T obj, string id)
         {
             return context.Query<T>(QueryModel.Update(QueryModel.Ref(id), context.ToFaunaObj(obj)));
         }
 
+        /// <summary>
+        /// Creates or updates a database object
+        /// </summary>
+        /// <param name="context">The database context instance</param>
+        /// <param name="obj">The object to be created or updated</param>
+        /// <typeparam name="T">The type of the model to be created/updated</typeparam>
+        /// <returns>Reference to created/updated database object</returns>
         public static Task<T> Upsert<T>(this IDbContext context, T obj)
         {
             var mapping = context.Mappings[typeof(T)];
@@ -128,6 +189,14 @@ namespace FaunaDB.LINQ.Extensions
             return context.Upsert(obj, id.Key.GetValue(obj).ToString());
         }
 
+        /// <summary>
+        /// Creates or updates a database object
+        /// </summary>
+        /// <param name="context">The database context instance</param>
+        /// <param name="obj">The object to be created or updated</param>
+        /// <param name="id">Ref of the object to be created or updated</param>
+        /// <typeparam name="T">The type of the model to be created/updated</typeparam>
+        /// <returns>Reference to created/updated database object</returns>
         public static Task<T> Upsert<T>(this IDbContext context, T obj, string id)
         {
             return context.Query<T>(QueryModel.If(QueryModel.Exists(QueryModel.Ref(id)),
@@ -135,6 +204,15 @@ namespace FaunaDB.LINQ.Extensions
                 QueryModel.Create(obj.GetClassRef(), context.ToFaunaObj(obj))));
         }
 
+        /// <summary>
+        /// Creates or updates a database object
+        /// </summary>
+        /// <param name="context">The database context instance</param>
+        /// <param name="obj">The object to be created or updated</param>
+        /// <param name="index">Name of the index for selecting the object to create or update</param>
+        /// <param name="args">Index comparison arguments for selecting the object to create or update</param>
+        /// <typeparam name="T">The type of the model to be created/updated</typeparam>
+        /// <returns>Reference to created/updated database object</returns>
         public static Task<T> Upsert<T>(this IDbContext context, T obj, string index, params object[] args)
         {
             return context.Query<T>(QueryModel.If(QueryModel.Exists(QueryModel.Match(QueryModel.Index(index), args)),
@@ -142,6 +220,16 @@ namespace FaunaDB.LINQ.Extensions
                 QueryModel.Create(obj.GetClassRef(), context.ToFaunaObj(obj))));
         }
 
+        /// <summary>
+        /// Creates or updates a database object
+        /// </summary>
+        /// <param name="context">The database context instance</param>
+        /// <param name="obj">The object to be created or updated</param>
+        /// <param name="indexSelector">Selector expression for the index used to create or update the object</param>
+        /// <param name="args">Index comparison arguments for selecting the object to create or update</param>
+        /// <typeparam name="T">The type of the model to be created/updated</typeparam>
+        /// <returns>Reference to created/updated database object</returns>
+        /// <exception cref="ArgumentException">Thrown if the index selector is invalid</exception>
         public static Task<T> Upsert<T>(this IDbContext context, T obj, Expression<Func<T, object>> indexSelector, params object[] args)
         {
             if (!(indexSelector.Body is MemberExpression member)) throw new ArgumentException("Index selector must be a member.");
@@ -154,6 +242,15 @@ namespace FaunaDB.LINQ.Extensions
             return Upsert(context, obj, indexName, args);
         }
 
+        /// <summary>
+        /// Creates or updates a database object
+        /// </summary>
+        /// <param name="context">The database context instance</param>
+        /// <param name="obj">The object to be created or updated</param>
+        /// <param name="indices">Index comparator expression to select the object to be created or updated</param>
+        /// <typeparam name="T">The type of the model to be created/updated</typeparam>
+        /// <returns>Reference to created/updated database object</returns>
+        /// <exception cref="ArgumentException">Thrown if the index comparator lambda is invalid</exception>
         public static Task<T> Upsert<T>(this IDbContext context, T obj, Expression<Func<T, bool>> indices)
         {
             if (!(indices.Body is BinaryExpression binary)) throw new ArgumentException("Index selector must be binary expression.");
@@ -163,6 +260,12 @@ namespace FaunaDB.LINQ.Extensions
                 QueryModel.Create(obj.GetClassRef(), context.ToFaunaObj(obj))));
         }
 
+        /// <summary>
+        /// Deletes a database object
+        /// </summary>
+        /// <param name="context">The database context instance</param>
+        /// <param name="obj">The object to be deleted from the database</param>
+        /// <returns>Task to track progress</returns>
         public static Task Delete(this IDbContext context, object obj)
         {
             var mapping = context.Mappings[obj.GetType()];
@@ -170,11 +273,24 @@ namespace FaunaDB.LINQ.Extensions
             return context.Delete(id.Key.GetValue(obj).ToString());
         }
 
+        /// <summary>
+        /// Deletes a database object
+        /// </summary>
+        /// <param name="context">The database context instance</param>
+        /// <param name="id">The ref of the object to be deleted from the database</param>
+        /// <returns>Task to track progress</returns>
         public static Task Delete(this IDbContext context, string id)
         {
             return context.Query<object>(QueryModel.Delete(QueryModel.Ref(id)));
         }
 
+        /// <summary>
+        /// Fetches single object from the database
+        /// </summary>
+        /// <param name="context">The database context instance</param>
+        /// <param name="ref">The ref of the object to be fetched from the database</param>
+        /// <typeparam name="T">The type of the model to be fetched</typeparam>
+        /// <returns>The object fetched from the database, or null if it doesn't exist</returns>
         public static Task<T> Get<T>(this IDbContext context, string @ref)
         {
             return context.Query<T>(QueryModel.Get(QueryModel.Ref(@ref)));

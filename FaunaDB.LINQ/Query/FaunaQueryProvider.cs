@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 
 namespace FaunaDB.LINQ.Query
 {
-    public class FaunaQueryProvider : IQueryProvider
+    internal class FaunaQueryProvider : IQueryProvider
     {
         private readonly IDbContext _context;
         private readonly object _selector;
 
-        public FaunaQueryProvider(IDbContext context, object selector)
+        internal FaunaQueryProvider(IDbContext context, object selector)
         {
             _context = context;
             _selector = selector;

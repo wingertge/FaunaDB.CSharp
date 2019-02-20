@@ -16,8 +16,7 @@ namespace FaunaDB.LINQ.Query
     public class FaunaQueryParser
     {
         private int _lambdaIndex;
-        private IDbContext _context;
-        private const string CurrentlyUnsupportedError = "Currently unsupported.";
+        private readonly IDbContext _context;
         private const string UnsupportedError = "Unsupported (likely won't change).";
 
         private static readonly Dictionary<(Type, string), Func<object, object, object>> BuiltInBinaryMethods = new Dictionary<(Type, string), Func<object, object, object>>
@@ -31,7 +30,7 @@ namespace FaunaDB.LINQ.Query
             { (typeof(Tuple), "Create"), a => a }
         };
 
-        public static Expr Parse(object selector, Expression expr, IDbContext context)
+        internal static Expr Parse(object selector, Expression expr, IDbContext context)
         {
             return (Expr)new FaunaQueryParser(context).WalkExpression(selector, expr);
         }

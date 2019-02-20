@@ -2,7 +2,7 @@
 
 namespace FaunaDB.LINQ.Modeling
 {
-    public interface IAttributeTypeConfiguration : ITypeConfiguration
+    internal interface IAttributeTypeConfiguration : ITypeConfiguration
     {
     }
 }

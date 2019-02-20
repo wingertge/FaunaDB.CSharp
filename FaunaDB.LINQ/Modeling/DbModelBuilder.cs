@@ -5,7 +5,7 @@ using FaunaDB.LINQ.Extensions;
 
 namespace FaunaDB.LINQ.Modeling
 {
-    public class DbModelBuilder
+    internal class DbModelBuilder
     {
         private readonly Queue<Type> _registrationQueue = new Queue<Type>();
         private readonly List<Type> _registeredTypes = new List<Type>();

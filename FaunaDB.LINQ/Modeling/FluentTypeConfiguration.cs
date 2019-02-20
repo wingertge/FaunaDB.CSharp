@@ -7,13 +7,17 @@ using FaunaDB.LINQ.Extensions;
 
 namespace FaunaDB.LINQ.Modeling
 {
+    /// <summary>
+    /// Base class for Fluent Type Mapping
+    /// </summary>
+    /// <typeparam name="T">Type of the database model to be mapped</typeparam>
     public class FluentTypeConfiguration<T> : IFluentTypeConfiguration<T>
     {
-        private Dictionary<PropertyInfo, TypeConfigurationEntry> _configuration { get; } = new Dictionary<PropertyInfo, TypeConfigurationEntry>();
+        private Dictionary<PropertyInfo, TypeConfigurationEntry> Configuration { get; } = new Dictionary<PropertyInfo, TypeConfigurationEntry>();
 
         public IFluentTypeConfiguration<T> HasKey<TProperty>(Expression<Func<T, TProperty>> property)
         {
-            _configuration[property.GetPropertyInfo()] = new TypeConfigurationEntry
+            Configuration[property.GetPropertyInfo()] = new TypeConfigurationEntry
             {
                 Type = ConfigurationType.Key,
                 Name = "ref"
@@ -24,7 +28,7 @@ namespace FaunaDB.LINQ.Modeling
 
         public IFluentTypeConfiguration<T> HasIndex<TProperty>(Expression<Func<T, TProperty>> property, string indexName, string name = null)
         {
-            _configuration[property.GetPropertyInfo()] = new IndexTypeConfigurationEntry
+            Configuration[property.GetPropertyInfo()] = new IndexTypeConfigurationEntry
             {
                 Type = ConfigurationType.Index,
                 Name = name,
@@ -36,7 +40,7 @@ namespace FaunaDB.LINQ.Modeling
 
         public IFluentTypeConfiguration<T> HasCompositeIndex<TProperty>(Expression<Func<T, TProperty>> property, string indexName)
         {
-            _configuration[property.GetPropertyInfo()] = new IndexTypeConfigurationEntry
+            Configuration[property.GetPropertyInfo()] = new IndexTypeConfigurationEntry
             {
                 Type = ConfigurationType.CompositeIndex,
                 IndexName = indexName
@@ -47,7 +51,7 @@ namespace FaunaDB.LINQ.Modeling
 
         public IFluentTypeConfiguration<T> HasReference<TProperty>(Expression<Func<T, TProperty>> property, string name = null)
         {
-            _configuration[property.GetPropertyInfo()] = new TypeConfigurationEntry
+            Configuration[property.GetPropertyInfo()] = new TypeConfigurationEntry
             {
                 Type = ConfigurationType.Reference,
                 Name = name
@@ -58,7 +62,7 @@ namespace FaunaDB.LINQ.Modeling
 
         public IFluentTypeConfiguration<T> HasName<TProperty>(Expression<Func<T, TProperty>> property, string name)
         {
-            _configuration[property.GetPropertyInfo()] = new TypeConfigurationEntry
+            Configuration[property.GetPropertyInfo()] = new TypeConfigurationEntry
             {
                 Type = ConfigurationType.NameOverride,
                 Name = name
@@ -69,7 +73,7 @@ namespace FaunaDB.LINQ.Modeling
 
         public IFluentTypeConfiguration<T> HasTimestamp<TProperty>(Expression<Func<T, TProperty>> property)
         {
-            _configuration[property.GetPropertyInfo()] = new TypeConfigurationEntry
+            Configuration[property.GetPropertyInfo()] = new TypeConfigurationEntry
             {
                 Type = ConfigurationType.Timestamp,
                 Name = "ts"
@@ -80,7 +84,7 @@ namespace FaunaDB.LINQ.Modeling
 
         public Dictionary<PropertyInfo, TypeConfigurationEntry> Build()
         {
-            return _configuration;
+            return Configuration;
         }
     }
 }

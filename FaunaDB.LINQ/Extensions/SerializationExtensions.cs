@@ -10,9 +10,9 @@ using Newtonsoft.Json.Linq;
 
 namespace FaunaDB.LINQ.Extensions
 {
-    public static class SerializationExtensions
+    internal static class SerializationExtensions
     {
-        public static object ToFaunaObj(this IDbContext context, object obj)
+        internal static object ToFaunaObj(this IDbContext context, object obj)
         {
             if (!context.Mappings.TryGetValue(obj.GetType(), out var mappings))
                 throw new InvalidMappingException("Trying to use unregistered type.");
@@ -68,12 +68,12 @@ namespace FaunaDB.LINQ.Extensions
             return mapping.Key.GetValue(obj);
         }
 
-        public static T Decode<T>(this IDbContext context, RequestResult request)
+        internal static T Decode<T>(this IDbContext context, RequestResult request)
         {
             return request == null ? default(T) : (T) Decode(context, JObject.Parse(request?.ResponseContent), typeof(T));
         }
 
-        public static dynamic Decode(this IDbContext context, JToken value, Type type)
+        internal static dynamic Decode(this IDbContext context, JToken value, Type type)
         {
             var obj = Activator.CreateInstance(type);
             if(!context.Mappings.ContainsKey(type))

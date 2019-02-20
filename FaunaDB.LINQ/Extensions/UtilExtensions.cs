@@ -12,7 +12,7 @@ using Newtonsoft.Json;
 
 namespace FaunaDB.LINQ.Extensions
 {
-    public static class UtilExtensions
+    internal static class UtilExtensions
     {
 
         internal static PropertyInfo GetPropertyInfo<TSource, TProperty>(this Expression<Func<TSource, TProperty>> propertyLambda)

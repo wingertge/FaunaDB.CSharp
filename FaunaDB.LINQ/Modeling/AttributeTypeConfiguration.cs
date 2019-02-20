@@ -7,7 +7,7 @@ using Newtonsoft.Json;
 
 namespace FaunaDB.LINQ.Modeling
 {
-    public class AttributeTypeConfiguration : IAttributeTypeConfiguration
+    internal class AttributeTypeConfiguration : IAttributeTypeConfiguration
     {
         private readonly Type _type;
 
